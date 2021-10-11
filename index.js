@@ -10,9 +10,10 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+pool.query(`DROP TABLE directions`);
 pool.query(`CREATE TABLE IF NOT EXISTS directions (
-  sourceChatId INTEGER NOT NULL PRIMARY KEY,
-  destinationChatId INTEGER NOT NULL
+  sourceChatId VARCHAR(30) NOT NULL PRIMARY KEY,
+  destinationChatId VARCHAR(30) NOT NULL
 )`);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -34,24 +35,24 @@ bot.start(ctx => {
 
 bot.command('link', ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  const destinationChatId = ctx.update.message.chat.id;
+  const destinationChatId = ctx.update.message.chat.id.toString();
   pairingChatIds.push(destinationChatId);
   ctx.reply(LINK_MSG + destinationChatId);
 });
 
 bot.command('unlink', async ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  const chatId = ctx.update.message.chat.id;
+  const chatId = ctx.update.message.chat.id.toString();
   await pool.query('DELETE FROM directions WHERE sourceChatId = $1 OR destinationChatId = $1', [chatId]);
   ctx.reply('Я більше не пересилатиму з цього чату / у цей чат.');
 });
 
 bot.on('text', async ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  const sourceChatId = ctx.update.message.chat.id;
+  const sourceChatId = ctx.update.message.chat.id.toString();
 
   if(ctx.update.message.text.startsWith(LINK_MSG)) {
-    const destinationChatId = parseInt(ctx.update.message.text.slice(LINK_MSG.length));
+    const destinationChatId = ctx.update.message.text.slice(LINK_MSG.length);
     if(pairingChatIds.includes(destinationChatId)) {
       pairingChatIds.splice(pairingChatIds.indexOf(destinationChatId), 1);
       await pool.query('INSERT INTO directions VALUES ($1, $2)', [sourceChatId, destinationChatId]);
