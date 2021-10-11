@@ -1,7 +1,7 @@
 const { Telegraf } = require('telegraf');
 const { Pool } = require('pg');
 const axios = require('axios');
-const { https } = require('follow-redirects');
+const https = require('https');
 const util = require('util');
 
 const WELCOME_MSG = `Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям.`;
