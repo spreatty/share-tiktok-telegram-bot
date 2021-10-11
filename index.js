@@ -10,7 +10,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
-pool.query(`DROP TABLE directions`);
+
 pool.query(`CREATE TABLE IF NOT EXISTS directions (
   sourceChatId VARCHAR(30) NOT NULL PRIMARY KEY,
   destinationChatId VARCHAR(30) NOT NULL
