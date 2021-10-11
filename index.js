@@ -63,11 +63,12 @@ bot.on('text', async (ctx, next) => {
   ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
 });
 
+const videoUrlRegex = /<meta property="og:video:secure_url" content="([^"]*)"\/>/;
 const tiktokUrlRegex = /[\.\/]tiktok.com/i;
 bot.url(tiktokUrlRegex, async ctx => {
   const sourceChatId = ctx.update.message.chat.id.toString();
   const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
-  console.log(util.inspect(dbResult, false, 5));
+  //console.log(util.inspect(dbResult, false, 5));
   if(!dbResult.rows.length)
     return;
   
@@ -79,10 +80,13 @@ bot.url(tiktokUrlRegex, async ctx => {
 
   const tiktokResponse = await axios.get(tiktokUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15'
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
     }
   });
-  console.log(util.inspect(tiktokResponse, false, 5));
+  //console.log(util.inspect(tiktokResponse, false, 5));
+  //console.log(tiktokResponse.data);
+  console.log(videoUrlRegex.exec(tiktokResponse.data));
 
   bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
 });
