@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "axios": "^0.22.0",
+    "follow-redirects": "^1.14.4",
     "pg": "^8.7.1",
     "telegraf": "^4.4.2"
   }

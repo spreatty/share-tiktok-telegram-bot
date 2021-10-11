@@ -1,6 +1,7 @@
 const { Telegraf } = require('telegraf');
 const { Pool } = require('pg');
 const axios = require('axios');
+const { https } = require('follow-redirects');
 const util = require('util');
 
 const WELCOME_MSG = `Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям.`;
@@ -80,7 +81,6 @@ bot.url(tiktokUrlRegex, async ctx => {
   
   console.log('URL: ' + tiktokUrl);//https://vm.tiktok.com/ZM88MSYdF/
   const src = await new Promise(accept => {
-  var https = require('https');
   var options = {
     //This is the only line that is new. `headers` is an object with the headers to request
     headers: {
