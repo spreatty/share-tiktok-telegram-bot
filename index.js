@@ -63,7 +63,8 @@ bot.on('text', async ctx => {
   ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
 });
 
-bot.textMention('tiktok.com', async ctx => {
+const tiktokUrlRegex = /[\.\/]tiktok.com/i;
+bot.url(tiktokUrlRegex, async ctx => {
   const sourceChatId = ctx.update.message.chat.id.toString();
   const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
   console.log(util.inspect(dbResult, false, 5));
@@ -72,7 +73,11 @@ bot.textMention('tiktok.com', async ctx => {
   
   const destinationChatId = dbResult.rows[0].destinationchatid;
 
-  const tiktokResponse = await axios.get(ctx.update.message.text, {
+  const tiktokUrl = ctx.update.message.entities.filter(({ type }) => type == 'url')
+      .map(({ offset, length }) => ctx.update.message.text.slice(offset, offset + length))
+      .find(url => tiktokUrlRegex.test(url));
+
+  const tiktokResponse = await axios.get(tiktokUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15'
     }
