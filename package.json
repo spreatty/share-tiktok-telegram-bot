@@ -1,0 +1,22 @@
+{
+  "name": "share-tiktok-telegram-bot",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spreatty/share-tiktok-telegram-bot.git"
+  },
+  "author": "spreatty",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/spreatty/share-tiktok-telegram-bot/issues"
+  },
+  "homepage": "https://github.com/spreatty/share-tiktok-telegram-bot#readme",
+  "engines": {
+    "node": "14.x"
+  },
+  "dependencies": {
+    "telegraf": "^4.4.2"
+  }
+}
