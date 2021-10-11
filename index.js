@@ -39,7 +39,7 @@ bot.command('link', ctx => {
   ctx.reply(LINK_MSG + destinationChatId);
 });
 
-bot.command('unlink', ctx => {
+bot.command('unlink', async ctx => {
   console.log(util.inspect(ctx.update, false, 10));
   const chatId = ctx.update.message.chat.id;
   await pool.query('DELETE FROM directions WHERE sourceChatId = $1 OR destinationChatId = $1', [chatId]);
