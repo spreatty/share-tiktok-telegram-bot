@@ -85,10 +85,10 @@ bot.url(tiktokUrlRegex, async ctx => {
     }
   });
   //console.log(util.inspect(tiktokResponse, false, 5));
-  //console.log(tiktokResponse.data);
+  console.log(tiktokResponse.data);
   const videoUrlMatch = videoUrlRegex.exec(tiktokResponse.data);
   console.log(videoUrlMatch);
-  if(videoUrlMatch[1])
+  if(videoUrlMatch)
     bot.telegram.sendVideo(destinationChatId, videoUrlMatch[1]);
   else
     bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
