@@ -48,14 +48,14 @@ bot.command('unlink', async ctx => {
   ctx.reply('Я більше не пересилатиму з цього чату / у цей чат.');
 });
 
-bot.on('text', async ctx => {
+bot.on('text', async (ctx, next) => {
   console.log(util.inspect(ctx.update, false, 10));
   if(!ctx.update.message.text.startsWith(LINK_MSG))
-    return;
+    return next();
   
   const destinationChatId = ctx.update.message.text.slice(LINK_MSG.length);
   if(!pairingChatIds.includes(destinationChatId))
-    return;
+    return next();
 
   pairingChatIds.splice(pairingChatIds.indexOf(destinationChatId), 1);
   const sourceChatId = ctx.update.message.chat.id.toString();
