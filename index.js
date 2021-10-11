@@ -86,9 +86,12 @@ bot.url(tiktokUrlRegex, async ctx => {
   });
   //console.log(util.inspect(tiktokResponse, false, 5));
   //console.log(tiktokResponse.data);
-  console.log(videoUrlRegex.exec(tiktokResponse.data));
-
-  bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
+  const videoUrlMatch = videoUrlRegex.exec(tiktokResponse.data);
+  console.log(videoUrlMatch);
+  if(videoUrlMatch[1])
+    bot.telegram.sendVideo(destinationChatId, videoUrlMatch[1]);
+  else
+    bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
 });
 bot.launch();
 
