@@ -22,7 +22,7 @@ bot.hears('give', ctx => {
 
   client.connect();
 
-  client.query('SELECT table_schema,table_name FROM information_schema.tables;', (err, res) => {
+  client.query('SELECT table_schema,table_name FROM information_schema.tables LIMIT 3', (err, res) => {
     if (err) throw err;
     ctx.reply(JSON.stringify(res.rows));
     client.end();
