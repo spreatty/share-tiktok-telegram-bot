@@ -77,6 +77,8 @@ bot.url(tiktokUrlRegex, async ctx => {
   const tiktokUrl = ctx.update.message.entities.filter(({ type }) => type == 'url')
       .map(({ offset, length }) => ctx.update.message.text.slice(offset, offset + length))
       .find(url => tiktokUrlRegex.test(url));
+  
+  console.log('URL: ' + tiktokUrl);
 
   const tiktokResponse = await axios.get(tiktokUrl, {
     headers: {
