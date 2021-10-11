@@ -62,7 +62,7 @@ bot.on('text', async ctx => {
     const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
     console.log(util.inspect(dbResult, false, 5));
     if(dbResult.rows.length) {
-      const { destinationChatId } = dbResult.rows[0];
+      const destinationChatId = dbResult.rows[0].destinationchatid;
       bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
     }
   }
