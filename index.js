@@ -135,7 +135,7 @@ bot.url(tiktokUrlRegex, async ctx => {
     });
   }
 
-  console.log(res);
+  console.log(res.headers);
   const videoUrlMatch = videoUrlRegex.exec(res.body);
   console.log(videoUrlMatch);
   if(videoUrlMatch)
