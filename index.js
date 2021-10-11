@@ -79,7 +79,7 @@ bot.url(tiktokUrlRegex, async ctx => {
       .map(({ offset, length }) => ctx.update.message.text.slice(offset, offset + length))
       .find(url => tiktokUrlRegex.test(url));
   
-  console.log('URL: ' + tiktokUrl);//https://vm.tiktok.com/ZM88MSYdF/
+  console.log('URL: ' + tiktokUrl);
   var res = await new Promise(accept => {
     var options = {
       //This is the only line that is new. `headers` is an object with the headers to request
@@ -112,6 +112,7 @@ bot.url(tiktokUrlRegex, async ctx => {
   //console.log(util.inspect(tiktokResponse, false, 5));
   if(res.headers.location){
     tiktokUrl = res.headers.location;
+    console.log('Redirect: ' + tiktokUrl);
     res = await new Promise(accept => {
       var options = {
         //This is the only line that is new. `headers` is an object with the headers to request
