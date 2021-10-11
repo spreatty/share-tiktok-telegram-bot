@@ -1,6 +1,15 @@
 const { Telegraf } = require('telegraf');
-const { Client } = require('pg');
+const { Pool } = require('pg');
 const util = require('util');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+pool.query(`CREATE TABLE IF NOT EXISTS directions (
+  sourceChatId INTEGER NOT NULL PRIMARY KEY,
+  destinationChatId INTEGER NOT NULL
+)`);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const path = '/' + encodeURIComponent(process.env.BOT_TOKEN);
@@ -10,26 +19,23 @@ bot.startWebhook(path, null, process.env.PORT || 8080);
 
 bot.start(ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  ctx.reply('Welcome');
+  ctx.reply('Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям. Перешли це повідомлення до чату, куди я надсилатиму відео.');
 });
-bot.hears('give', ctx => {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
-
-  client.connect();
-
-  client.query('SELECT table_schema,table_name FROM information_schema.tables LIMIT 3', (err, res) => {
+bot.on('text', ctx => {
+  /*pool.query('SELECT table_schema,table_name FROM information_schema.tables LIMIT 3', (err, res) => {
     if (err) throw err;
     ctx.reply(JSON.stringify(res.rows));
-    client.end();
-  });
+  });*/
+  console.log(util.inspect(ctx.update, false, 10));
 });
 bot.launch();
 
 // Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once('SIGINT', () => {
+  bot.stop('SIGINT');
+  pool.end();
+});
+process.once('SIGTERM', () => {
+  bot.stop('SIGTERM');
+  pool.end();
+});
