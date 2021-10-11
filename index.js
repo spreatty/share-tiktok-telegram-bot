@@ -63,7 +63,7 @@ bot.on('text', async ctx => {
   ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
 });
 
-bot.hears('tiktok.com', async ctx => {
+bot.textMention('tiktok.com', async ctx => {
   const sourceChatId = ctx.update.message.chat.id.toString();
   const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
   console.log(util.inspect(dbResult, false, 5));
