@@ -80,7 +80,7 @@ bot.url(tiktokUrlRegex, async ctx => {
   
   console.log('URL: ' + tiktokUrl);//https://vm.tiktok.com/ZM88MSYdF/
   const src = await new Promise(accept => {
-  var http = require('http');
+  var https = require('https');
   var options = {
     //This is the only line that is new. `headers` is an object with the headers to request
     headers: {
@@ -98,7 +98,7 @@ bot.url(tiktokUrlRegex, async ctx => {
       accept(str);
     });
   };
-  http.request(tiktokUrl, options, callback).end();
+  https.request(tiktokUrl, options, callback).end();
   });
 
   /*const tiktokResponse = await axios.get(tiktokUrl, {
