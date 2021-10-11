@@ -8,7 +8,7 @@ bot.telegram.setWebhook('https://share-tiktok-telegram-bot.herokuapp.com' + path
 bot.startWebhook(path, null, process.env.PORT || 8080);
 
 bot.start(ctx => {
-  console.log(util.inspect(ctx, false, 15, true));
+  console.log(util.inspect(ctx.update, false, 10));
   ctx.reply('Welcome');
 });
 bot.launch();
