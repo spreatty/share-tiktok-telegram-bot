@@ -19,7 +19,7 @@ bot.startWebhook(path, null, process.env.PORT || 8080);
 
 bot.start(ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  ctx.reply('Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям. Перешли це повідомлення до чату, куди я надсилатиму відео.');
+  ctx.reply('Вітаю! Я @ShareTikTokBot, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям. Перешли це повідомлення до чату, куди я надсилатиму відео.');
 });
 bot.on('text', ctx => {
   /*pool.query('SELECT table_schema,table_name FROM information_schema.tables LIMIT 3', (err, res) => {
