@@ -1,5 +1,6 @@
 const { Telegraf } = require('telegraf');
 const { Pool } = require('pg');
+const axios = require('axios');
 const util = require('util');
 
 const WELCOME_MSG = `Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям.`;
@@ -49,23 +50,36 @@ bot.command('unlink', async ctx => {
 
 bot.on('text', async ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  const sourceChatId = ctx.update.message.chat.id.toString();
+  if(!ctx.update.message.text.startsWith(LINK_MSG))
+    return;
+  
+  const destinationChatId = ctx.update.message.text.slice(LINK_MSG.length);
+  if(!pairingChatIds.includes(destinationChatId))
+    return;
 
-  if(ctx.update.message.text.startsWith(LINK_MSG)) {
-    const destinationChatId = ctx.update.message.text.slice(LINK_MSG.length);
-    if(pairingChatIds.includes(destinationChatId)) {
-      pairingChatIds.splice(pairingChatIds.indexOf(destinationChatId), 1);
-      await pool.query('INSERT INTO directions VALUES ($1, $2)', [sourceChatId, destinationChatId]);
-      ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
+  pairingChatIds.splice(pairingChatIds.indexOf(destinationChatId), 1);
+  const sourceChatId = ctx.update.message.chat.id.toString();
+  await pool.query('INSERT INTO directions VALUES ($1, $2)', [sourceChatId, destinationChatId]);
+  ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
+});
+
+bot.hears('tiktok.com', async ctx => {
+  const sourceChatId = ctx.update.message.chat.id.toString();
+  const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
+  console.log(util.inspect(dbResult, false, 5));
+  if(!dbResult.rows.length)
+    return;
+  
+  const destinationChatId = dbResult.rows[0].destinationchatid;
+
+  const tiktokResponse = await axios.get(ctx.update.message.text, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15'
     }
-  } else {
-    const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
-    console.log(util.inspect(dbResult, false, 5));
-    if(dbResult.rows.length) {
-      const destinationChatId = dbResult.rows[0].destinationchatid;
-      bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
-    }
-  }
+  });
+  console.log(util.inspect(tiktokResponse, false, 5));
+
+  bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
 });
 bot.launch();
 

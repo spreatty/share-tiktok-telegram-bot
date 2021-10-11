@@ -20,6 +20,7 @@
     "node": "14.x"
   },
   "dependencies": {
+    "axios": "^0.22.0",
     "pg": "^8.7.1",
     "telegraf": "^4.4.2"
   }
