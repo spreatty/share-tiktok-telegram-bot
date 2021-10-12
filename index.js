@@ -105,7 +105,8 @@ bot.url(tiktokUrlRegex, async ctx => {
       bot.telegram.sendVideo(destinationChatId, { source: response });
     }).end();
   } else {
-    console.log('Sending html');
+    console.log('Forwarding original message and sending html');
+    bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
     bot.telegram.sendDocument(destinationChatId, { source: Buffer.from(body), filename: 'tiktok.html' });
   }
 });
