@@ -1,7 +1,6 @@
 const { Telegraf } = require('telegraf');
 const { Pool } = require('pg');
-const axios = require('axios');
-const https = require('https');
+const http2 = require('http2-client');
 const util = require('util');
 
 const WELCOME_MSG = `Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям.`;
@@ -75,70 +74,17 @@ bot.url(tiktokUrlRegex, async ctx => {
   
   const destinationChatId = dbResult.rows[0].destinationchatid;
 
-  var tiktokUrl = ctx.update.message.entities.filter(({ type }) => type == 'url')
+  const tiktokUrl = ctx.update.message.entities.filter(({ type }) => type == 'url')
       .map(({ offset, length }) => ctx.update.message.text.slice(offset, offset + length))
       .find(url => tiktokUrlRegex.test(url));
   
-  console.log('URL: ' + tiktokUrl);
-  var res = await new Promise(accept => {
-    var options = {
-      //This is the only line that is new. `headers` is an object with the headers to request
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-      }
-    };
-    callback = function(response) {
-      var str = ''
-      response.on('data', function (chunk) {
-        str += chunk;
-      });
-
-      response.on('end', function () {
-        accept({headers: response.headers, body: str});
-      });
-    };
-    https.request(tiktokUrl, options, callback).end();
+  const body = await http2get(tiktokUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15'
+    }
   });
 
-  /*const tiktokResponse = await axios.get(tiktokUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*//*;q=0.8'
-    },
-    responseType: 'document',
-    withCredentials: true
-  });*/
-  //console.log(util.inspect(tiktokResponse, false, 5));
-  if(res.headers.location){
-    tiktokUrl = res.headers.location;
-    console.log('Redirect: ' + tiktokUrl);
-    res = await new Promise(accept => {
-      var options = {
-        //This is the only line that is new. `headers` is an object with the headers to request
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Host': 'm.tiktok.com'
-        }
-      };
-      callback = function(response) {
-        var str = ''
-        response.on('data', function (chunk) {
-          str += chunk;
-        });
-    
-        response.on('end', function () {
-          accept({headers: response.headers, body: str});
-        });
-      };
-      https.request(tiktokUrl, options, callback).end();
-    });
-  }
-
-  console.log(res.headers);
-  const videoUrlMatch = videoUrlRegex.exec(res.body);
-  console.log(videoUrlMatch);
+  const videoUrlMatch = videoUrlRegex.exec(body);
   if(videoUrlMatch)
     bot.telegram.sendVideo(destinationChatId, videoUrlMatch[1]);
   else
@@ -155,3 +101,21 @@ process.once('SIGTERM', () => {
   bot.stop('SIGTERM');
   pool.end();
 });
+
+function http2get(url, options) {
+  return new Promise((resolve, reject) => {
+    http2.get(url, options, response => {
+      if(response.headers.location) {
+        http2get(response.headers.location, options).then(resolve);
+        response.destroy();
+      } else {
+        var data = '';
+        response.setEncoding('utf8');
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => {
+          resolve(data);
+        });
+      }
+    }).end();
+  });
+}
