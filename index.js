@@ -9,10 +9,8 @@ const ADMIN_MSG = `Зроби мене адміністратором, щоб я
 const LINK_MSG = `Перешли це повідомлення до чату, до якого надсилатимеш TikTok посилання. Пам'ятай, я маю бути адміністратором у тому чаті, щоб я міг бачити усі повідомлення.\n\n`;
 
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15';
-const httpOptions = {
-  headers: {
-    'User-Agent': USER_AGENT
-  }
+const headers = {
+  'User-Agent': USER_AGENT
 };
 
 const pool = new Pool({
@@ -88,9 +86,9 @@ bot.url(tiktokUrlRegex, async ctx => {
   
   console.log('URL: ' + tiktokUrl);
   
-  const initRes = await httpsGet(tiktokUrl, httpOptions);
+  const initRes = await httpsGet(tiktokUrl, headers);
 
-  const body = initRes.redirect ? await http2GetFollowRedirect(initRes.redirect, httpOptions) : initRes.data;
+  const body = initRes.redirect ? await http2GetFollowRedirect(initRes.redirect, headers) : initRes.data;
 
   const videoUrlMatch = videoUrlRegex.exec(body);
   if(videoUrlMatch) {
@@ -123,9 +121,9 @@ process.once('SIGTERM', () => {
   pool.end();
 });
 
-function httpsGet(url, options) {
+function httpsGet(url, headers) {
   return new Promise((resolve, reject) => {
-    https.get(url, options, response => {
+    https.get(url, { headers }, response => {
       console.log(response.headers);
       if(response.headers.location) {
         resolve({ redirect: response.headers.location });
@@ -140,11 +138,11 @@ function httpsGet(url, options) {
   });
 }
 
-function http2GetFollowRedirect(url, options) {
-  return http2Get(url, options).then(res => res.redirect ? http2GetFollowRedirect(res.redirect, options) : res.data);
+function http2GetFollowRedirect(url, headers) {
+  return http2Get(url, headers).then(res => res.redirect ? http2GetFollowRedirect(res.redirect, headers) : res.data);
 }
 
-function http2Get(url, options) {
+function http2Get(url, headers) {
   url = new URL(url);
   return new Promise((resolve, reject) => {
     const client = http2.connect(url);
@@ -152,7 +150,7 @@ function http2Get(url, options) {
     
     const request = client.request({
       ':path': url.pathname,
-      ...options
+      ...headers
     });
     request.on('response', headers => {
       console.log(headers);
