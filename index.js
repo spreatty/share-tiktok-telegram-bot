@@ -87,10 +87,13 @@ bot.url(tiktokUrlRegex, async ctx => {
   });
 
   const videoUrlMatch = videoUrlRegex.exec(body);
-  if(videoUrlMatch)
+  if(videoUrlMatch) {
+    console.log('Sending video ' + videoUrlMatch[1]);
     bot.telegram.sendVideo(destinationChatId, videoUrlMatch[1]);
-  else
+  } else {
+    console.log('Forwarding original message ' + ctx.update.message.text);
     bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
+  }
 });
 bot.launch();
 
