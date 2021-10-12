@@ -7,6 +7,8 @@ const WELCOME_MSG = `Вітаю! Я бот, що вміє видобувати �
 const ADMIN_MSG = `Зроби мене адміністратором, щоб я міг бачити усі повідомлення.`;
 const LINK_MSG = `Перешли це повідомлення до чату, до якого надсилатимеш TikTok посилання. Пам'ятай, я маю бути адміністратором у тому чаті, щоб я міг бачити усі повідомлення.\n\n`;
 
+const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15';
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -82,15 +84,24 @@ bot.url(tiktokUrlRegex, async ctx => {
   
   const body = await http2get(tiktokUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15'
+      'User-Agent': USER_AGENT
     }
   });
 
   const videoUrlMatch = videoUrlRegex.exec(body);
   if(videoUrlMatch) {
-    const videoUrl = videoUrlMatch[1].replace(/&amp;/g, '&');
-    console.log('Sending video ' + videoUrl);
-    bot.telegram.sendVideo(destinationChatId, videoUrl);
+    const videoUrl = new URL(videoUrlMatch[1].replace(/&amp;/g, '&'));
+    console.log('Fetching video ' + videoUrl);
+    http2.get(videoUrl, {
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Host': videoUrl.hostname,
+        'Referer': videoUrl.href
+      }
+    }, response => {
+      console.log(response.headers);
+      bot.telegram.sendVideo(destinationChatId, { source: response });
+    }).end();
   } else {
     console.log('Forwarding original message ' + ctx.update.message.text);
     bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
