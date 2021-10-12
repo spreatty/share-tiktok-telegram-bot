@@ -1,6 +1,7 @@
 const { Telegraf } = require('telegraf');
 const { Pool } = require('pg');
-const http2 = require('http2-client');
+const https = require('https');
+const http2 = require('http2');
 const util = require('util');
 
 const WELCOME_MSG = `Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям.`;
@@ -8,6 +9,11 @@ const ADMIN_MSG = `Зроби мене адміністратором, щоб я
 const LINK_MSG = `Перешли це повідомлення до чату, до якого надсилатимеш TikTok посилання. Пам'ятай, я маю бути адміністратором у тому чаті, щоб я міг бачити усі повідомлення.\n\n`;
 
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15';
+const httpOptions = {
+  headers: {
+    'User-Agent': USER_AGENT
+  }
+};
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -82,17 +88,15 @@ bot.url(tiktokUrlRegex, async ctx => {
   
   console.log('URL: ' + tiktokUrl);
   
-  const body = await http2get(tiktokUrl, {
-    headers: {
-      'User-Agent': USER_AGENT
-    }
-  });
+  const initRes = await httpsGet(tiktokUrl, httpOptions);
+
+  const body = initRes.redirect ? await http2GetFollowRedirect(initRes.redirect, httpOptions) : initRes.data;
 
   const videoUrlMatch = videoUrlRegex.exec(body);
   if(videoUrlMatch) {
     const videoUrl = new URL(videoUrlMatch[1].replace(/&amp;/g, '&'));
     console.log('Fetching video ' + videoUrl);
-    http2.get(videoUrl, {
+    https.get(videoUrl, {
       headers: {
         'User-Agent': USER_AGENT,
         'Host': videoUrl.hostname,
@@ -119,20 +123,62 @@ process.once('SIGTERM', () => {
   pool.end();
 });
 
-function http2get(url, options) {
+function httpsGet(url, options) {
   return new Promise((resolve, reject) => {
-    http2.get(url, options, response => {
+    https.get(url, options, response => {
       if(response.headers.location) {
-        http2get(response.headers.location, options).then(resolve);
+        resolve({ redirect: response.headers.location });
         response.destroy();
       } else {
         var data = '';
         response.setEncoding('utf8');
         response.on('data', chunk => data += chunk);
-        response.on('end', () => {
-          resolve(data);
-        });
+        response.on('end', () => resolve({ data }));
       }
     }).end();
+  });
+}
+
+function http2GetFollowRedirect(url, options) {
+  return http2Get(url, options).then(res => res.redirect ? http2GetFollowRedirect(res.redirect, options) : res.data);
+}
+
+function http2Get(url, options) {
+  url = new URL(url);
+  return new Promise((resolve, reject) => {
+    http2.get(url, options, response => {
+      if(response.headers.location) {
+        resolve({ redirect: response.headers.location });
+        response.destroy();
+      } else {
+        var data = '';
+        response.setEncoding('utf8');
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => resolve({ data }));
+      }
+    }).end();
+    const client = http2.connect(url);
+    client.on('error', reject);
+    
+    const request = client.request({
+      ':path': url.pathname,
+      ...options
+    });
+    request.on('response', headers => {
+      if(headers.location) {
+        resolve({ redirect: headers.location });
+        request.close();
+        client.close();
+      }
+    });
+
+    var data = '';
+    request.setEncoding('utf8');
+    request.on('data', chunk => data += chunk);
+    request.on('end', () => {
+      resolve({ data });
+      client.close();
+    });
+    request.end();
   });
 }
