@@ -146,17 +146,6 @@ function http2GetFollowRedirect(url, options) {
 function http2Get(url, options) {
   url = new URL(url);
   return new Promise((resolve, reject) => {
-    http2.get(url, options, response => {
-      if(response.headers.location) {
-        resolve({ redirect: response.headers.location });
-        response.destroy();
-      } else {
-        var data = '';
-        response.setEncoding('utf8');
-        response.on('data', chunk => data += chunk);
-        response.on('end', () => resolve({ data }));
-      }
-    }).end();
     const client = http2.connect(url);
     client.on('error', reject);
     
@@ -169,15 +158,15 @@ function http2Get(url, options) {
         resolve({ redirect: headers.location });
         request.close();
         client.close();
+      } else {
+        var data = '';
+        request.setEncoding('utf8');
+        request.on('data', chunk => data += chunk);
+        request.on('end', () => {
+          resolve({ data });
+          client.close();
+        });
       }
-    });
-
-    var data = '';
-    request.setEncoding('utf8');
-    request.on('data', chunk => data += chunk);
-    request.on('end', () => {
-      resolve({ data });
-      client.close();
     });
     request.end();
   });
