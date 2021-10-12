@@ -88,8 +88,9 @@ bot.url(tiktokUrlRegex, async ctx => {
 
   const videoUrlMatch = videoUrlRegex.exec(body);
   if(videoUrlMatch) {
-    console.log('Sending video ' + videoUrlMatch[1]);
-    bot.telegram.sendVideo(destinationChatId, videoUrlMatch[1]);
+    const videoUrl = videoUrlMatch[1].replace(/&amp;/g, '&');
+    console.log('Sending video ' + videoUrl);
+    bot.telegram.sendVideo(destinationChatId, videoUrl);
   } else {
     console.log('Forwarding original message ' + ctx.update.message.text);
     bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
