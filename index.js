@@ -126,6 +126,7 @@ process.once('SIGTERM', () => {
 function httpsGet(url, options) {
   return new Promise((resolve, reject) => {
     https.get(url, options, response => {
+      console.log(response.headers);
       if(response.headers.location) {
         resolve({ redirect: response.headers.location });
         response.destroy();
@@ -154,6 +155,7 @@ function http2Get(url, options) {
       ...options
     });
     request.on('response', headers => {
+      console.log(headers);
       if(headers.location) {
         resolve({ redirect: headers.location });
         request.close();
