@@ -78,6 +78,8 @@ bot.url(tiktokUrlRegex, async ctx => {
       .map(({ offset, length }) => ctx.update.message.text.slice(offset, offset + length))
       .find(url => tiktokUrlRegex.test(url));
   
+  console.log('URL: ' + tiktokUrl);
+  
   const body = await http2get(tiktokUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15'
