@@ -61,7 +61,12 @@ bot.on('text', async (ctx, next) => {
 
   pairingChatIds.splice(pairingChatIds.indexOf(destinationChatId), 1);
   const sourceChatId = ctx.update.message.chat.id.toString();
-  await pool.query('INSERT INTO directions VALUES ($1, $2)', [sourceChatId, destinationChatId]);
+  const isChatLinked = await pool.query('SELECT COUNT(*) AS count FROM directions WHERE sourceChatId = $1', [sourceChatId])
+      .then(res => res.rows[0].count > 0);
+  if(isChatLinked)
+    await pool.query('UPDATE directions SET destinationChatId = $2 WHERE sourceChatId = $1', [sourceChatId, destinationChatId]);
+  else
+    await pool.query('INSERT INTO directions VALUES ($1, $2)', [sourceChatId, destinationChatId]);
   ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
 });
 
