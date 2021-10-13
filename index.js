@@ -89,10 +89,10 @@ bot.url(tiktokUrlRegex, async ctx => {
 
   const body = await httpGet(tiktokUrl, headers);
 
-  const videoConfigMatch = body.match(/"video":(\{.*?playAddr.*?\})/);
+  const videoConfigRaw = body.match(/"video":(\{.*?\})/g)?.find(match => match.includes('playAddr'));
 
-  if(videoConfigMatch) {
-    const videoConfig = JSON.parse(videoConfigMatch[1]);
+  if(videoConfigRaw) {
+    const videoConfig = JSON.parse('{' + videoConfigRaw + '}').video;
     const videoUrl = new URL(videoConfig.playAddr);
     console.log('Fetching video ' + videoUrl);
     https.get(videoUrl, {
