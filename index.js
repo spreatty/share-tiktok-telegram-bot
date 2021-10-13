@@ -24,10 +24,6 @@ pool.query(`CREATE TABLE IF NOT EXISTS directions (
 )`);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const path = '/' + encodeURIComponent(process.env.BOT_TOKEN);
-
-bot.telegram.setWebhook('https://share-tiktok-telegram-bot.herokuapp.com' + path);
-bot.startWebhook(path, null, process.env.PORT || 8080);
 
 const pairingChatIds = [];
 const directions = {};
@@ -69,7 +65,7 @@ bot.on('text', async (ctx, next) => {
   ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
 });
 
-const videoUrlRegex = /<meta property="og:video:secure_url" content="(.*?)"/;
+const videoUrlRegex = /"playAddr"\s*:\s*"(.*?)"/i;
 const tiktokUrlRegex = /[\.\/]tiktok.com/i;
 bot.url(tiktokUrlRegex, async ctx => {
   const sourceChatId = ctx.update.message.chat.id.toString();
@@ -85,10 +81,8 @@ bot.url(tiktokUrlRegex, async ctx => {
       .find(url => tiktokUrlRegex.test(url));
   
   console.log('URL: ' + tiktokUrl);
-  
-  const initRes = await httpsGet(tiktokUrl, headers);
 
-  const body = initRes.redirect ? await http2GetFollowRedirect(initRes.redirect, headers) : initRes.data;
+  const body = await httpGet(tiktokUrl, headers);
 
   const videoUrlMatch = videoUrlRegex.exec(body);
   if(videoUrlMatch) {
@@ -110,7 +104,13 @@ bot.url(tiktokUrlRegex, async ctx => {
     bot.telegram.sendDocument(destinationChatId, { source: Buffer.from(body), filename: 'tiktok.html' });
   }
 });
-bot.launch();
+
+bot.launch({
+  webhook: {
+    domain: 'share-tiktok-telegram-bot.herokuapp.com',
+    port: process.env.PORT
+  }
+});
 
 // Enable graceful stop
 process.once('SIGINT', () => {
@@ -122,53 +122,54 @@ process.once('SIGTERM', () => {
   pool.end();
 });
 
+function httpGet(url, headers) {
+  if(!(url instanceof URL))
+    url = new URL(url);
+  if(['m.tiktok.com', 'www.tiktok.com'].includes(url.hostname))
+    return httpsGet(url, headers);
+  else
+    return http2Get(url, headers);
+}
+
 function httpsGet(url, headers) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers }, response => {
-      console.log(response.headers);
-      if(response.headers.location) {
-        resolve({ redirect: response.headers.location });
-        response.destroy();
+    https.get(url, { headers }, res => {
+      console.log(res.headers);
+      if(res.headers.location) {
+        httpGet(res.headers.location, headers).then(resolve).catch(reject);
+        res.destroy();
       } else {
+        res.setEncoding('utf8');
         var data = '';
-        response.setEncoding('utf8');
-        response.on('data', chunk => data += chunk);
-        response.on('end', () => resolve({ data }));
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => resolve(data));
       }
-    }).end();
+    }).on('error', reject).end();
   });
 }
 
-function http2GetFollowRedirect(url, headers) {
-  return http2Get(url, headers).then(res => res.redirect ? http2GetFollowRedirect(res.redirect, headers) : res.data);
-}
-
 function http2Get(url, headers) {
-  url = new URL(url);
   return new Promise((resolve, reject) => {
-    const client = http2.connect(url);
-    client.on('error', reject);
-    
-    const request = client.request({
-      ':path': url.pathname,
-      ...headers
-    });
-    request.on('response', headers => {
-      console.log(headers);
-      if(headers.location) {
-        resolve({ redirect: headers.location });
-        request.close();
-        client.close();
-      } else {
-        var data = '';
-        request.setEncoding('utf8');
-        request.on('data', chunk => data += chunk);
-        request.on('end', () => {
-          resolve({ data });
+    const client = http2.connect(url).on('error', reject).on('connect', () => {
+      const request = client.request({
+        ':path': url.pathname,
+        ...headers
+      }).on('response', resHeaders => {
+        console.log(resHeaders);
+        if(resHeaders.location) {
+          httpGet(resHeaders.location, headers).then(resolve).catch(reject);
+          request.close();
           client.close();
-        });
-      }
+        } else {
+          request.setEncoding('utf8');
+          var data = '';
+          request.on('data', chunk => data += chunk);
+          request.on('end', () => {
+            resolve(data);
+            client.close();
+          });
+        }
+      }).on('error', reject).end();
     });
-    request.end();
   });
 }
