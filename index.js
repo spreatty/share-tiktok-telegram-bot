@@ -132,10 +132,7 @@ process.once('SIGTERM', () => {
 function httpGet(url, headers) {
   if(!(url instanceof URL))
     url = new URL(url);
-  if(['m.tiktok.com', 'www.tiktok.com'].includes(url.hostname))
-    return httpsGet(url, headers);
-  else
-    return http2Get(url, headers);
+  return (['m.tiktok.com', 'www.tiktok.com'].includes(url.hostname) ? http2Get : httpsGet)(url, headers);
 }
 
 function httpsGet(url, headers) {
