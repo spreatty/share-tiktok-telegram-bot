@@ -84,9 +84,11 @@ bot.url(tiktokUrlRegex, async ctx => {
 
   const body = await httpGet(tiktokUrl, headers);
 
-  const videoUrlMatch = videoUrlRegex.exec(body);
-  if(videoUrlMatch) {
-    const videoUrl = new URL(videoUrlMatch[1].replace(/&amp;/g, '&'));
+  const videoConfigMatch = body.match(/"video":(\{.*?playAddr.*?\})/);
+
+  if(videoConfigMatch) {
+    const videoConfig = JSON.parse(videoConfigMatch[1]);
+    const videoUrl = new URL(videoConfig.playAddr);
     console.log('Fetching video ' + videoUrl);
     https.get(videoUrl, {
       headers: {
@@ -96,7 +98,7 @@ bot.url(tiktokUrlRegex, async ctx => {
       }
     }, response => {
       console.log(response.headers);
-      bot.telegram.sendVideo(destinationChatId, { source: response });
+      bot.telegram.sendVideo(destinationChatId, { source: response }, { width: videoConfig.width, height: videoConfig.height });
     }).end();
   } else {
     console.log('Forwarding original message and sending html');
