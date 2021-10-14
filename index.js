@@ -4,36 +4,129 @@ const https = require('https');
 const http2 = require('http2');
 const util = require('util');
 
-const WELCOME_MSG = `Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та пересилати їх іншим людям.`;
-const ADMIN_MSG = `Зроби мене адміністратором, щоб я міг бачити усі повідомлення.`;
+const text = require('./text');
+
 const LINK_MSG = `Перешли це повідомлення до чату, до якого надсилатимеш TikTok посилання. Пам'ятай, я маю бути адміністратором у тому чаті, щоб я міг бачити усі повідомлення.\n\n`;
 
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15';
-const headers = {
-  'User-Agent': USER_AGENT
-};
+
+const retriesCount = 2;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-pool.query(`CREATE TABLE IF NOT EXISTS directions (
-  sourceChatId VARCHAR(30) NOT NULL PRIMARY KEY,
-  destinationChatId VARCHAR(30) NOT NULL
+pool.query(`CREATE TABLE IF NOT EXISTS links (
+  source VARCHAR(30) NOT NULL,
+  target VARCHAR(30) NOT NULL,
+  PRIMARY KEY (source, target)
+)`);
+pool.query(`CREATE TABLE IF NOT EXISTS link_registry (
+  id SERIAL PRIMARY KEY,
+  chat_id VARCHAR(30) NOT NULL,
+  from_source BOOLEAN NOT NULL
 )`);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const pairingChatIds = [];
-const directions = {};
+
+bot.command('test_start', ctx => {
+  ctx.reply(text.start);
+  ctx.reply(text.whatFor, {
+    reply_markup: {
+      inline_keyboard: [
+        [{
+          text: text.whatForOptions.source,
+          callback_data: 'source'
+        }], [{
+          text: text.whatForOptions.target,
+          callback_data: 'target'
+        }], [{
+          text: text.whatForOptions.both,
+          callback_data: 'both'
+        }]
+      ]
+    }
+  });
+});
+
+bot.on('callback_query', ctx => {
+  ctx.answerCbQuery();
+  const chatId = ctx.callbackQuery.message.chat.id;
+  switch(ctx.callbackQuery.data) {
+    case 'source':
+      setupLink(chatId, true);
+      break;
+    case 'target':
+      setupLink(chatId, false);
+      break;
+    case 'both':
+      setupForBoth(chatId);
+  }
+});
+
+bot.command('link_target', ctx => {
+  console.log(util.inspect(ctx.update, false, 10));
+});
+
+bot.command('link_source', ctx => {
+  console.log(util.inspect(ctx.update, false, 10));
+});
+
+async function setupLink(chatId, isFromSource) {
+  const linkId = await registerLink(chatId, isFromSource);
+  const _for = isFromSource ? 'target' : 'source';
+
+  bot.telegram.sendMessage(chatId, text.selectChat[_for], {
+    reply_markup: {
+      inline_keyboard: [[{
+        text: text.selectChat.button,
+        switch_inline_query: `/link_${_for} ${linkId}`
+      }]]
+    }
+  });
+}
+
+async function setupForBoth(chatId) {
+  const ok = await link(chatId, chatId);
+  bot.telegram.sendMessage(ok ? text.linked.self : text.alreadyLinkedSelf);
+}
+
+async function registerLink(chatId, isFromSource) {
+  var { rows } = await pool.query('SELECT id FROM link_registry WHERE chat_id = $1 AND from_source = $2', [chatId, isFromSource]);
+  if(!rows.length)
+    ({ rows } = await pool.query('INSERT INTO link_registry (chat_id, from_source) VALUES ($1, $2) RETURNING id', [chatId, isFromSource]));
+  return rows[0].id;
+}
+
+function popLinkRegistry(linkId) {
+  var { rows } = await pool.query('DELETE FROM link_registry WHERE id = $1 RETURNING *', [linkId]);
+  return rows.length ? {
+    chatId: rows[0].chat_id,
+    isFromSource: rows[0].from_source
+  } : null;
+}
+
+function isLinkExists(source, target) {
+  return pool.query('SELECT COUNT(*) AS count FROM links WHERE source = $1 AND target = $2', [source, target])
+      .then(res => res.rows[0].count > 0);
+}
+
+async function link(source, target) {
+  if(await isLinkExists(source, target))
+    return false;
+  
+  await pool.query('INSERT INTO links VALUES ($1, $2)', [source, target]);
+  return true;
+}
 
 bot.start(ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  var welcome = WELCOME_MSG;
+  ctx.reply(text.start);
   if(ctx.update.message.chat.type == 'group')
-    welcome += ADMIN_MSG;
-  ctx.reply(welcome);
+    ctx.reply(text.admin);
 });
 
 bot.command('link', ctx => {
@@ -70,9 +163,10 @@ bot.on('text', async (ctx, next) => {
   ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
 });
 
-const videoUrlRegex = /"playAddr"\s*:\s*"(.*?)"/i;
+const videoConfigRegex = /"video":(\{.*?\})/g;
 const tiktokUrlRegex = /[\.\/]tiktok.com/i;
 bot.url(tiktokUrlRegex, async ctx => {
+  console.log(util.inspect(ctx.update, false, 10));
   const sourceChatId = ctx.update.message.chat.id.toString();
   const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
   //console.log(util.inspect(dbResult, false, 5));
@@ -87,9 +181,16 @@ bot.url(tiktokUrlRegex, async ctx => {
   
   console.log('URL: ' + tiktokUrl);
 
-  const body = await httpGet(tiktokUrl, headers);
+  var { urlStack, data } = await httpGet(tiktokUrl, { 'User-Agent': USER_AGENT });
+  var videoConfigRaw = data.match(videoConfigRegex)?.find(match => match.includes('playAddr'));
 
-  const videoConfigRaw = body.match(/"video":(\{.*?\})/g)?.find(match => match.includes('playAddr'));
+  var i = 1;
+  while(i <= retriesCount && !videoConfigRaw) {
+    console.log(`Retry #${i} ${urlStack[0]}`);
+    ({ data } = await httpGet(urlStack[0], { 'User-Agent': USER_AGENT }));
+    videoConfigRaw = data.match(videoConfigRegex)?.find(match => match.includes('playAddr'));
+    ++i;
+  }
 
   if(videoConfigRaw) {
     const videoConfig = JSON.parse('{' + videoConfigRaw + '}').video;
@@ -129,10 +230,14 @@ process.once('SIGTERM', () => {
   pool.end();
 });
 
-function httpGet(url, headers) {
+async function httpGet(url, headers) {
   if(!(url instanceof URL))
     url = new URL(url);
-  return (['m.tiktok.com', 'www.tiktok.com'].includes(url.hostname) ? http2Get : httpsGet)(url, headers);
+  const result = await (['m.tiktok.com', 'www.tiktok.com'].includes(url.hostname) ? http2Get : httpsGet)(url, headers);
+  if(!result.urlStack)
+    result.urlStack = [];
+  result.urlStack.push(url);
+  return result;
 }
 
 function httpsGet(url, headers) {
@@ -146,7 +251,7 @@ function httpsGet(url, headers) {
         res.setEncoding('utf8');
         var data = '';
         res.on('data', chunk => data += chunk);
-        res.on('end', () => resolve(data));
+        res.on('end', () => resolve({ data }));
       }
     }).on('error', reject).end();
   });
@@ -169,7 +274,7 @@ function http2Get(url, headers) {
           var data = '';
           request.on('data', chunk => data += chunk);
           request.on('end', () => {
-            resolve(data);
+            resolve({ data });
             client.close();
           });
         }
