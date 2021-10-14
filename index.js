@@ -50,11 +50,13 @@ bot.command('start', ctx => {
 });
 
 bot.on('callback_query', ctx => {
+  console.log(util.inspect(ctx, false, 10));
   ctx.answerCbQuery();
   const chatId = ctx.callbackQuery.message.chat.id.toString();
   switch(ctx.callbackQuery.data) {
     case 'source':
-      setupLink(chatId, true);
+      const needAdmin = ctx.update.message.chat.type == 'group';
+      setupLink(chatId, true, needAdmin);
       break;
     case 'target':
       setupLink(chatId, false);
@@ -107,10 +109,13 @@ bot.command('link', async ctx => {
     bot.telegram.sendMessage(source, text.linked.source);
     bot.telegram.sendMessage(target, text.linked.target);
   }
+  
+  if(linkRegistry.needAdmin)
+    bot.telegram.sendMessage(source, text.needAdmin);
 });
 
-async function setupLink(chatId, isFromSource) {
-  const linkId = await registerLink(chatId, isFromSource);
+async function setupLink(chatId, isFromSource, needAdmin) {
+  const linkId = await registerLink(chatId, isFromSource, needAdmin);
 
   bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source']);
   bot.telegram.sendMessage(chatId, '/link@ShareTikTokBot ' + linkId);
@@ -121,10 +126,10 @@ async function setupForBoth(chatId) {
   bot.telegram.sendMessage(chatId, ok ? text.linked.self : text.alreadyLinkedSelf);
 }
 
-async function registerLink(chatId, isFromSource) {
+async function registerLink(chatId, isFromSource = false, needAdmin = false) {
   var { rows } = await pool.query('SELECT id FROM link_registry WHERE chat_id = $1 AND from_source = $2', [chatId, isFromSource]);
   if(!rows.length)
-    ({ rows } = await pool.query('INSERT INTO link_registry (chat_id, from_source) VALUES ($1, $2) RETURNING id', [chatId, isFromSource]));
+    ({ rows } = await pool.query('INSERT INTO link_registry (chat_id, from_source, need_admin) VALUES ($1, $2, $3) RETURNING id', [chatId, isFromSource, needAdmin]));
   return rows[0].id;
 }
 
@@ -132,7 +137,8 @@ async function popLinkRegistry(linkId) {
   var { rows } = await pool.query('DELETE FROM link_registry WHERE id = $1 RETURNING *', [linkId]);
   return rows.length ? {
     chatId: rows[0].chat_id,
-    isFromSource: rows[0].from_source
+    isFromSource: rows[0].from_source,
+    needAdmin: rows[0].need_admin
   } : null;
 }
 
