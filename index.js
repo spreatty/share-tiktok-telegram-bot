@@ -50,13 +50,13 @@ bot.command('start', ctx => {
 });
 
 bot.on('callback_query', ctx => {
-  console.log(util.inspect(ctx, false, 10));
+  console.log(util.inspect(ctx.update, false, 10));
   ctx.answerCbQuery();
-  const chatId = ctx.callbackQuery.message.chat.id.toString();
+  const chatId = ctx.update.callback_query.message.chat.id.toString();
   switch(ctx.callbackQuery.data) {
     case 'source':
-      const needAdmin = ctx.update.message.chat.type == 'group';
-      setupLink(chatId, true, needAdmin);
+      const notAdmin = ctx.update.callback_query.message.chat.type == 'group';
+      setupLink(chatId, true, notAdmin);
       break;
     case 'target':
       setupLink(chatId, false);
