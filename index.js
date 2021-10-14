@@ -28,17 +28,6 @@ pool.query(`CREATE TABLE IF NOT EXISTS link_registry (
   from_source BOOLEAN NOT NULL
 )`);
 
-const pairs = [
-  [-1001203639731, -1001704922494],
-  [406411894, -759309063],
-  [-787425662, -706700809],
-  [601769206, 601769206]
-];
-
-pairs.forEach(([ from, to ]) => {
-  pool.query('INSERT INTO links (source, target) VALUES ($1, $2)', [from, to]);
-});
-
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const pairingChatIds = [];
