@@ -29,8 +29,8 @@ pool.query(`CREATE TABLE IF NOT EXISTS link_registry (
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-bot.command('start', ctx => {
-  ctx.reply(text.start);
+bot.command('start', async ctx => {
+  await ctx.reply(text.start);
   ctx.reply(text.whatFor, {
     reply_markup: {
       inline_keyboard: [
@@ -104,10 +104,12 @@ bot.command('link', async ctx => {
 
   const ok = await link(source, target);
   if(!ok) {
-    ctx.reply(text.alreadyLinked);
+    await ctx.reply(text.alreadyLinked);
   } else {
-    bot.telegram.sendMessage(source, text.linked.source);
-    bot.telegram.sendMessage(target, text.linked.target);
+    await Promise.all([
+      bot.telegram.sendMessage(source, text.linked.source),
+      bot.telegram.sendMessage(target, text.linked.target)
+    ]);
   }
   
   if(linkRegistry.needAdmin)
@@ -117,7 +119,7 @@ bot.command('link', async ctx => {
 async function setupLink(chatId, isFromSource, needAdmin) {
   const linkId = await registerLink(chatId, isFromSource, needAdmin);
 
-  bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source']);
+  await bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source']);
   bot.telegram.sendMessage(chatId, '/link@ShareTikTokBot ' + linkId);
 }
 
@@ -203,8 +205,10 @@ bot.url(tiktokUrlRegex, async ctx => {
     }).end();
   } else {
     console.log('Forwarding original message and sending html');
-    broadcast(targets, (target, fileId) => {
-      bot.telegram.sendMessage(target, ctx.update.message.text);
+    broadcast(targets, async (target, fileId) => {
+      await bot.telegram.sendMessage(target, ctx.update.message.text, {
+        disable_web_page_preview: true
+      });
       return fileId
         ? bot.telegram.sendDocument(target, fileId)
         : bot.telegram.sendDocument(target, { source: Buffer.from(body), filename: 'tiktok.html' });
