@@ -67,31 +67,21 @@ bot.on('callback_query', ctx => {
   }
 });
 
-bot.command('link_target', ctx => {
+bot.command('test_link', ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-});
-
-bot.command('link_source', ctx => {
-  console.log(util.inspect(ctx.update, false, 10));
+  const [ command, ...args ] = ctx.update.message.text.split(' ');
 });
 
 async function setupLink(chatId, isFromSource) {
   const linkId = await registerLink(chatId, isFromSource);
-  const _for = isFromSource ? 'target' : 'source';
 
-  bot.telegram.sendMessage(chatId, text.selectChat[_for], {
-    reply_markup: {
-      inline_keyboard: [[{
-        text: text.selectChat.button,
-        switch_inline_query: `/link_${_for} ${linkId}`
-      }]]
-    }
-  });
+  bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source']);
+  bot.telegram.sendMessage(chatId, '/test_link@ShareTikTokBot ' + linkId);
 }
 
 async function setupForBoth(chatId) {
   const ok = await link(chatId, chatId);
-  bot.telegram.sendMessage(ok ? text.linked.self : text.alreadyLinkedSelf);
+  bot.telegram.sendMessage(chatId, ok ? text.linked.self : text.alreadyLinkedSelf);
 }
 
 async function registerLink(chatId, isFromSource) {
