@@ -20,8 +20,6 @@ pool.query(`CREATE TABLE IF NOT EXISTS links (
   target VARCHAR(30) NOT NULL,
   PRIMARY KEY (source, target)
 )`);
-pool.query(`DROP TABLE directions`);
-pool.query(`DROP TABLE link_registry`);
 pool.query(`CREATE TABLE IF NOT EXISTS link_registry (
   id SERIAL PRIMARY KEY,
   chat_id VARCHAR(30) NOT NULL,
@@ -160,7 +158,7 @@ bot.url(tiktokUrlRegex, async ctx => {
   if(!rows.length)
     return;
   
-  const target = rows[0].target;
+  const targets = rows.map(row => row.target);
 
   const tiktokUrl = ctx.update.message.entities.filter(({ type }) => type == 'url')
       .map(({ offset, length }) => ctx.update.message.text.slice(offset, offset + length))
@@ -191,12 +189,20 @@ bot.url(tiktokUrlRegex, async ctx => {
       }
     }, response => {
       console.log(response.headers);
-      bot.telegram.sendVideo(target, { source: response }, { width: videoConfig.width, height: videoConfig.height });
+      broadcast(targets, (target, fileId) => {
+        return fileId
+          ? bot.telegram.sendVideo(target, fileId)
+          : bot.telegram.sendVideo(target, { source: response }, { width: videoConfig.width, height: videoConfig.height });
+      });
     }).end();
   } else {
     console.log('Forwarding original message and sending html');
-    bot.telegram.sendMessage(target, ctx.update.message.text);
-    bot.telegram.sendDocument(target, { source: Buffer.from(body), filename: 'tiktok.html' });
+    broadcast(targets, (target, fileId) => {
+      bot.telegram.sendMessage(target, ctx.update.message.text);
+      return fileId
+        ? bot.telegram.sendDocument(target, fileId)
+        : bot.telegram.sendDocument(target, { source: Buffer.from(body), filename: 'tiktok.html' });
+    });
   }
 });
 
@@ -216,6 +222,13 @@ process.once('SIGTERM', () => {
   bot.stop('SIGTERM');
   pool.end();
 });
+
+async function broadcast(targets, action) {
+  const [ first, ...rest ] = targets;
+  const res = await action(first);
+  const fileId = res.video ? res.video.file_id : res.document.file_id;
+  rest.forEach(target => action(target, fileId));
+}
 
 async function httpGet(url, headers) {
   if(!(url instanceof URL))
