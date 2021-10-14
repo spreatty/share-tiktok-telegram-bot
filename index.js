@@ -28,6 +28,17 @@ pool.query(`CREATE TABLE IF NOT EXISTS link_registry (
   from_source BOOLEAN NOT NULL
 )`);
 
+const pairs = [
+  [-1001203639731, -1001704922494],
+  [406411894, -759309063],
+  [-787425662, -706700809],
+  [601769206, 601769206]
+];
+
+pairs.forEach(([ from, to ]) => {
+  pool.query('INSERT INTO links (source, target) VALUES ($1, $2)', [from, to]);
+});
+
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 const pairingChatIds = [];
@@ -67,9 +78,34 @@ bot.on('callback_query', ctx => {
   }
 });
 
-bot.command('test_link', ctx => {
-  console.log(util.inspect(ctx.update, false, 10));
-  const [ command, ...args ] = ctx.update.message.text.split(' ');
+bot.command('test_link', async ctx => {
+  const [ _, linkIdRaw ] = ctx.update.message.text.split(' ');
+  const linkId = parseInt(linkIdRaw);
+  if(isNaN(linkId)) {
+    ctx.reply(text.error.link.generic);
+    return;
+  }
+
+  const linkRegistry = await popLinkRegistry(linkId);
+  if(!linkRegistry) {
+    ctx.reply(text.error.link.badRegistry);
+    return;
+  }
+
+  var source = linkRegistry.chatId;
+  var target = ctx.message.chat.id;
+  if(!linkRegistry.isFromSource) {
+    source = ctx.message.chat.id;
+    target = linkRegistry.chatId;
+  }
+
+  const ok = await link(source, target);
+  if(!ok) {
+    ctx.reply(text.alreadyLinked);
+  } else {
+    bot.telegram.sendMessage(source, text.linked.source);
+    bot.telegram.sendMessage(target, text.linked.target);
+  }
 });
 
 async function setupLink(chatId, isFromSource) {
