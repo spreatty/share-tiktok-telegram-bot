@@ -6,8 +6,6 @@ const util = require('util');
 
 const text = require('./text');
 
-const LINK_MSG = `Перешли це повідомлення до чату, до якого надсилатимеш TikTok посилання. Пам'ятай, я маю бути адміністратором у тому чаті, щоб я міг бачити усі повідомлення.\n\n`;
-
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15';
 
 const retriesCount = 2;
@@ -22,17 +20,18 @@ pool.query(`CREATE TABLE IF NOT EXISTS links (
   target VARCHAR(30) NOT NULL,
   PRIMARY KEY (source, target)
 )`);
+pool.query(`DROP TABLE directions`);
+pool.query(`DROP TABLE link_registry`);
 pool.query(`CREATE TABLE IF NOT EXISTS link_registry (
   id SERIAL PRIMARY KEY,
   chat_id VARCHAR(30) NOT NULL,
-  from_source BOOLEAN NOT NULL
+  from_source BOOLEAN NOT NULL,
+  need_admin BOOLEAN NOT NULL
 )`);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const pairingChatIds = [];
-
-bot.command('test_start', ctx => {
+bot.command('start', ctx => {
   ctx.reply(text.start);
   ctx.reply(text.whatFor, {
     reply_markup: {
@@ -54,7 +53,7 @@ bot.command('test_start', ctx => {
 
 bot.on('callback_query', ctx => {
   ctx.answerCbQuery();
-  const chatId = ctx.callbackQuery.message.chat.id;
+  const chatId = ctx.callbackQuery.message.chat.id.toString();
   switch(ctx.callbackQuery.data) {
     case 'source':
       setupLink(chatId, true);
@@ -67,7 +66,15 @@ bot.on('callback_query', ctx => {
   }
 });
 
-bot.command('test_link', async ctx => {
+/*bot.command('unlink', async ctx => {
+  const chatId = ctx.update.message.chat.id.toString();
+  const { rows } = await pool.query('DELETE FROM links WHERE source = $1 OR target = $1 RETURNING *', [chatId]);
+
+  bot.telegram.sendMessage(source, text.linked.source);
+  bot.telegram.sendMessage(target, text.linked.target);
+});*/
+
+bot.command('link', async ctx => {
   const [ _, linkIdRaw ] = ctx.update.message.text.split(' ');
   const linkId = parseInt(linkIdRaw);
   if(isNaN(linkId)) {
@@ -81,11 +88,18 @@ bot.command('test_link', async ctx => {
     return;
   }
 
-  var source = linkRegistry.chatId;
-  var target = ctx.message.chat.id;
+  var source = linkRegistry.chatId,
+    target = ctx.message.chat.id.toString();
+
+  if(source == target) {
+    setupForBoth(source);
+    return;
+  }
+
   if(!linkRegistry.isFromSource) {
-    source = ctx.message.chat.id;
-    target = linkRegistry.chatId;
+    const tmp = source;
+    source = target;
+    target = tmp;
   }
 
   const ok = await link(source, target);
@@ -101,7 +115,7 @@ async function setupLink(chatId, isFromSource) {
   const linkId = await registerLink(chatId, isFromSource);
 
   bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source']);
-  bot.telegram.sendMessage(chatId, '/test_link@ShareTikTokBot ' + linkId);
+  bot.telegram.sendMessage(chatId, '/link@ShareTikTokBot ' + linkId);
 }
 
 async function setupForBoth(chatId) {
@@ -132,63 +146,21 @@ async function isLinkExists(source, target) {
 async function link(source, target) {
   if(await isLinkExists(source, target))
     return false;
-  
+
   await pool.query('INSERT INTO links VALUES ($1, $2)', [source, target]);
   return true;
 }
-
-bot.start(ctx => {
-  console.log(util.inspect(ctx.update, false, 10));
-  ctx.reply(text.start);
-  if(ctx.update.message.chat.type == 'group')
-    ctx.reply(text.admin);
-});
-
-bot.command('link', ctx => {
-  console.log(util.inspect(ctx.update, false, 10));
-  const destinationChatId = ctx.update.message.chat.id.toString();
-  pairingChatIds.push(destinationChatId);
-  ctx.reply(LINK_MSG + destinationChatId);
-});
-
-bot.command('unlink', async ctx => {
-  console.log(util.inspect(ctx.update, false, 10));
-  const chatId = ctx.update.message.chat.id.toString();
-  await pool.query('DELETE FROM directions WHERE sourceChatId = $1 OR destinationChatId = $1', [chatId]);
-  ctx.reply('Я більше не пересилатиму з цього чату / у цей чат.');
-});
-
-bot.on('text', async (ctx, next) => {
-  console.log(util.inspect(ctx.update, false, 10));
-  if(!ctx.update.message.text.startsWith(LINK_MSG))
-    return next();
-  
-  const destinationChatId = ctx.update.message.text.slice(LINK_MSG.length);
-  if(!pairingChatIds.includes(destinationChatId))
-    return next();
-
-  pairingChatIds.splice(pairingChatIds.indexOf(destinationChatId), 1);
-  const sourceChatId = ctx.update.message.chat.id.toString();
-  const isChatLinked = await pool.query('SELECT COUNT(*) AS count FROM directions WHERE sourceChatId = $1', [sourceChatId])
-      .then(res => res.rows[0].count > 0);
-  if(isChatLinked)
-    await pool.query('UPDATE directions SET destinationChatId = $2 WHERE sourceChatId = $1', [sourceChatId, destinationChatId]);
-  else
-    await pool.query('INSERT INTO directions VALUES ($1, $2)', [sourceChatId, destinationChatId]);
-  ctx.reply('Чудово! Відтепер я пересилатиму твої тік-токи до іншого чату.')
-});
 
 const videoConfigRegex = /"video":(\{.*?\})/g;
 const tiktokUrlRegex = /[\.\/]tiktok.com/i;
 bot.url(tiktokUrlRegex, async ctx => {
   console.log(util.inspect(ctx.update, false, 10));
-  const sourceChatId = ctx.update.message.chat.id.toString();
-  const dbResult = await pool.query('SELECT destinationChatId FROM directions WHERE sourceChatId = $1', [sourceChatId]);
-  //console.log(util.inspect(dbResult, false, 5));
-  if(!dbResult.rows.length)
+  const source = ctx.update.message.chat.id.toString();
+  const { rows } = await pool.query('SELECT target FROM links WHERE source = $1', [source]);
+  if(!rows.length)
     return;
   
-  const destinationChatId = dbResult.rows[0].destinationchatid;
+  const target = rows[0].target;
 
   const tiktokUrl = ctx.update.message.entities.filter(({ type }) => type == 'url')
       .map(({ offset, length }) => ctx.update.message.text.slice(offset, offset + length))
@@ -219,12 +191,12 @@ bot.url(tiktokUrlRegex, async ctx => {
       }
     }, response => {
       console.log(response.headers);
-      bot.telegram.sendVideo(destinationChatId, { source: response }, { width: videoConfig.width, height: videoConfig.height });
+      bot.telegram.sendVideo(target, { source: response }, { width: videoConfig.width, height: videoConfig.height });
     }).end();
   } else {
     console.log('Forwarding original message and sending html');
-    bot.telegram.sendMessage(destinationChatId, ctx.update.message.text);
-    bot.telegram.sendDocument(destinationChatId, { source: Buffer.from(body), filename: 'tiktok.html' });
+    bot.telegram.sendMessage(target, ctx.update.message.text);
+    bot.telegram.sendDocument(target, { source: Buffer.from(body), filename: 'tiktok.html' });
   }
 });
 
