@@ -101,7 +101,7 @@ async function registerLink(chatId, isFromSource) {
   return rows[0].id;
 }
 
-function popLinkRegistry(linkId) {
+async function popLinkRegistry(linkId) {
   var { rows } = await pool.query('DELETE FROM link_registry WHERE id = $1 RETURNING *', [linkId]);
   return rows.length ? {
     chatId: rows[0].chat_id,
@@ -109,9 +109,9 @@ function popLinkRegistry(linkId) {
   } : null;
 }
 
-function isLinkExists(source, target) {
-  return pool.query('SELECT COUNT(*) AS count FROM links WHERE source = $1 AND target = $2', [source, target])
-      .then(res => res.rows[0].count > 0);
+async function isLinkExists(source, target) {
+  const { rows } = await pool.query('SELECT COUNT(*) AS count FROM links WHERE source = $1 AND target = $2', [source, target]);
+  return rows[0].count > 0;
 }
 
 async function link(source, target) {
