@@ -61,8 +61,9 @@ async function onLink(ctx) {
     return;
   }
   
+  const chatId = ctx.update.message.chat.id.toString();
   var source = linkRegistry.chatId,
-  target = ctx.message.chat.id.toString();
+      target = chatId;
   
   if(source == target) {
     setupForBoth(source);
@@ -70,9 +71,8 @@ async function onLink(ctx) {
   }
   
   if(!linkRegistry.isFromSource) {
-    const tmp = source;
-    source = target;
-    target = tmp;
+    source = chatId;
+    target = linkRegistry.chatId;
   }
   
   const ok = await link(source, target);
@@ -85,8 +85,9 @@ async function onLink(ctx) {
     ]);
   }
   
-  if(linkRegistry.needAdmin)
-  bot.telegram.sendMessage(source, text.needAdmin);
+  if(linkRegistry.needAdmin || (!linkRegistry.isFromSource
+      && ctx.update.message.chat.type == 'group'))
+    bot.telegram.sendMessage(source, text.needAdmin);
 }
 
 /*bot.command('unlink', async ctx => {
