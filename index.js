@@ -6,7 +6,7 @@ const db = require('./db');
 db.connect();
 db.createSchema();
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+global.bot = new Telegraf(process.env.BOT_TOKEN);
 
 process.once('SIGINT', () => {
   bot.stop('SIGINT');
@@ -17,7 +17,7 @@ process.once('SIGTERM', () => {
   db.close();
 });
 
-UserBot(bot);
+UserBot.addHandlers();
 
 bot.url(isTiktokUrl, onTiktok);
 
