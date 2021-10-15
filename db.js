@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const pool;
+var pool;
 
 module.exports = {
   connect,
