@@ -14,7 +14,5 @@ async function exec(ctx) {
   console.log(util.inspect(ctx.update, false, 10));
 
   const code = ctx.update.message.text.slice('/exec '.length);
-  const res = await vm.runInThisContext(code);
-  if(res)
-    ctx.reply('' + res);
+  vm.runInThisContext(code);
 }
