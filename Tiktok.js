@@ -29,8 +29,8 @@ async function onTiktok({ update }) {
   console.log('URL: ' + tiktokUrl);
 
   var name = update.message.from.first_name;
-  if(ctx.update.message.from.last_name)
-    name += ' ' + ctx.update.message.from.last_name;
+  if(update.message.from.last_name)
+    name += ' ' + update.message.from.last_name;
   
   const caption = text.from + name;
   const captionEntities = [{ type: 'bold', offset: text.from.length, length: name.length }];
