@@ -50,5 +50,6 @@ async function broadcast(targets, sendFirst, sendKnown) {
   const [ first, ...rest ] = targets;
   const res = await sendFirst(first);
   const fileId = res.video ? res.video.file_id : res.document.file_id;
+  console.log('Generated file id ' + fileId);
   rest.forEach(target => sendKnown(target, fileId));
 }
