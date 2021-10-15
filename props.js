@@ -1,3 +1,5 @@
+const text = require('./text');
+
 module.exports = {
     whatFor: {
         reply_markup: {
