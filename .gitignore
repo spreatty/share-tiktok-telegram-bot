@@ -1,3 +1,7 @@
+.http
+conn.js
+echo.js
+
 # Logs
 logs
 *.log
