@@ -1,3 +1,4 @@
+const vm = require('vm');
 const util = require('util');
 
 module.exports = {
@@ -6,7 +7,12 @@ module.exports = {
   }
 };
 
-function exec(ctx) {
+async function exec(ctx) {
+  if(ctx.update.message.chat.username != 'spreatty')
+    return;
+
   console.log(util.inspect(ctx.update, false, 10));
-  const js = ctx.update.message.text.slice('/exec '.length);
+
+  const code = ctx.update.message.text.slice('/exec '.length);
+  ctx.reply(await vm.runInThisContext(code));
 }
