@@ -1,4 +1,5 @@
 const TiktokFetcher = require('./TiktokFetcher');
+const text = require('./text');
 const props = require('./props');
 const db = require('./db');
 
@@ -27,11 +28,19 @@ async function onTiktok({ update }) {
   
   console.log('URL: ' + tiktokUrl);
 
+  var name = update.message.from.first_name;
+  if(ctx.update.message.from.last_name)
+    name += ' ' + ctx.update.message.from.last_name;
+  
+  const caption = text.from + name;
+  const captionEntities = [{ type: 'bold', offset: text.from.length, length: name.length }];
+
   new TiktokFetcher(tiktokUrl)
       .on('success', (videoStream, { width, height }) => {
+        const extraData = { width, height, caption, caption_entities: captionEntities };
         broadcast(targets,
-            target => bot.telegram.sendVideo(target, { source: videoStream }, { width, height }),
-            (target, fileId) => bot.telegram.sendVideo(target, fileId));
+            target => bot.telegram.sendVideo(target, { source: videoStream }, extraData),
+            (target, fileId) => bot.telegram.sendVideo(target, fileId, extraData));
       })
       .on('fail', data => {
         console.log('Failed to retrieve the video. Forwarding original message and sending received html');

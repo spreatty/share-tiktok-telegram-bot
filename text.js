@@ -1,4 +1,10 @@
 module.exports = {
+    get(textId, params) {
+        var text = this[textId];
+        for(var i = 0; i < params.length; ++i)
+            text = text.replace(new RegExp(`\\$${i + 1}`, 'g'), params[i]);
+        return text;
+    },
     start: 'Вітаю! Я бот, що вміє видобувати відео з TikTok посилань та надсилати їх у чати.',
     whatFor: 'Для чого цей чат?',
     whatForOptions: {
@@ -20,6 +26,7 @@ module.exports = {
     unlinked: "1 чат від'єднано.",
     unlinkedSelf: "Поширення і отримання в цьому чаті вимкнено.",
     needAdmin: 'Зроби мене адміністратором, щоб я міг читати усі повідомлення в цій групі.',
+    from: 'Від ',
 
     error: {
         link: {
