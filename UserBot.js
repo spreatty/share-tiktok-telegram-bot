@@ -89,7 +89,7 @@ module.exports = function(bot) {
 
 /*bot.command('unlink', async ctx => {
   const chatId = ctx.update.message.chat.id.toString();
-  const { rows } = await pool.query('DELETE FROM links WHERE source = $1 OR target = $1 RETURNING *', [chatId]);
+  const rows = await pool.query('DELETE FROM links WHERE source = $1 OR target = $1 RETURNING *', [chatId]);
 
   bot.telegram.sendMessage(source, text.linked.source);
   bot.telegram.sendMessage(target, text.linked.target);
