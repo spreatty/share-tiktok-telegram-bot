@@ -1,6 +1,7 @@
 const { Telegraf } = require('telegraf');
 const { isTiktokUrl, onTiktok } = require('./Tiktok');
 const UserBot = require('./UserBot');
+const AdminBot = require('./AdminBot');
 const db = require('./db');
 
 db.connect();
@@ -18,6 +19,7 @@ process.once('SIGTERM', () => {
 });
 
 UserBot.addHandlers();
+AdminBot.addHandlers();
 
 bot.url(isTiktokUrl, onTiktok);
 
