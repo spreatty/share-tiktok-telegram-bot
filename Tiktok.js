@@ -1,5 +1,6 @@
 const TiktokFetcher = require('./TiktokFetcher');
 const props = require('./props');
+const db = require('./db');
 
 module.exports = {
   isTiktokUrl,

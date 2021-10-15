@@ -27,5 +27,3 @@ bot.launch({
     port: process.env.PORT
   }
 });
-
-console.log(process.env);
