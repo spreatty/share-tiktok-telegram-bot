@@ -14,6 +14,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
   #url;
 
   constructor(url) {
+    super();
     this.#url = url;
   }
 
