@@ -110,7 +110,7 @@ function http2Get(url, headers) {
                   this.headers = headers;
                   this.on('end', close);
                   resolve(this);
-                });
-          })
-          .end());
+                })
+                .end();
+          }));
 }
