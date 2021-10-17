@@ -57,16 +57,17 @@ function connect() {
 
 function createSchema() {
   pool.query(`
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
     CREATE TABLE IF NOT EXISTS links (
       source VARCHAR(30) NOT NULL,
       target VARCHAR(30) NOT NULL,
       PRIMARY KEY (source, target)
     );
     CREATE TABLE IF NOT EXISTS link_registry (
-      id SERIAL PRIMARY KEY,
+      id UUID DEFAULT uuid_generate_v4(),
       chat_id VARCHAR(30) NOT NULL,
       from_source BOOLEAN NOT NULL,
-      need_admin BOOLEAN NOT NULL
+      PRIMARY KEY (id)
     );
   `);
 }
