@@ -41,11 +41,12 @@ async function sql(ctx) {
     return;
   }
 
-  var rows = rows.slice(0, 50).map(row => Object.values(row).map(val => val.toString()));
-
   const padding = 2;
   var columns = Object.keys(rows[0]);
   console.log(columns);
+  
+  rows = rows.slice(0, 50).map(row => Object.values(row).map(val => val.toString()));
+  
   var widths = columns.map(txt => txt.length);
   rows.forEach(row => row.forEach((txt, idx) => txt.length > widths[idx] && (widths[idx] = txt.length)));
 
