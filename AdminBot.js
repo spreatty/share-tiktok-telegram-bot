@@ -36,7 +36,7 @@ async function sql(ctx) {
     return;
   }
 
-  if(!result.rows.length) {
+  if(!rows.length) {
     ctx.reply('Empty response');
     return;
   }
