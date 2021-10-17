@@ -38,8 +38,8 @@ function getLinkRegistry(chatId, isFromSource) {
       .then(result => result.rows);
 }
 
-function putLinkRegistry(chatId, isFromSource, needAdmin) {
-  return pool.query('INSERT INTO link_registry (chat_id, from_source, need_admin) VALUES ($1, $2, $3) RETURNING id', [chatId, isFromSource, needAdmin])
+function putLinkRegistry(chatId, isFromSource) {
+  return pool.query('INSERT INTO link_registry (chat_id, from_source) VALUES ($1, $2) RETURNING id', [chatId, isFromSource])
       .then(result => result.rows);
 }
 

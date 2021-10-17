@@ -8,10 +8,7 @@ module.exports = {
     bot.command('start', start);
     bot.on('callback_query', callbackQuery);
     bot.command('link', onLink);
-    bot.command('link@ShareTikTokBot', ctx => ctx.reply('Heh'));
-    bot.on('text', ctx => {
-      console.log(util.inspect(ctx.update, false, 10));
-    });
+    bot.command('link@ShareTikTokBot', onLink);
   }
 };
 
@@ -28,8 +25,7 @@ function callbackQuery(ctx) {
   const chatId = ctx.update.callback_query.message.chat.id.toString();
   switch(ctx.callbackQuery.data) {
     case 'source':
-      const notAdmin = ctx.update.callback_query.message.chat.type == 'group';
-      setupLink(chatId, true, notAdmin);
+      setupLink(chatId, true);
       break;
     case 'target':
       setupLink(chatId, false);
@@ -39,8 +35,8 @@ function callbackQuery(ctx) {
   }
 }
 
-async function setupLink(chatId, isFromSource, needAdmin) {
-  const linkId = await registerLink(chatId, isFromSource, needAdmin);
+async function setupLink(chatId, isFromSource) {
+  const linkId = await registerLink(chatId, isFromSource);
   
   await bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source']);
   bot.telegram.sendMessage(chatId, '/link@ShareTikTokBot ' + linkId);
@@ -83,10 +79,6 @@ async function onLink(ctx) {
       bot.telegram.sendMessage(target, text.linked.target)
     ]);
   }
-  
-  if(linkRegistry.needAdmin || (!linkRegistry.isFromSource
-      && ctx.update.message.chat.type == 'group'))
-    bot.telegram.sendMessage(source, text.needAdmin);
 }
 
 /*bot.command('unlink', async ctx => {

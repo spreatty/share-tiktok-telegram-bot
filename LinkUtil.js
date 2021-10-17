@@ -6,10 +6,10 @@ module.exports = {
   link
 };
 
-async function registerLink(chatId, isFromSource = false, needAdmin = false) {
+async function registerLink(chatId, isFromSource = false) {
   var rows = await db.getLinkRegistry(chatId, isFromSource);
   if(!rows.length)
-    rows = await db.putLinkRegistry(chatId, isFromSource, needAdmin);
+    rows = await db.putLinkRegistry(chatId, isFromSource);
   return rows[0].id;
 }
 
@@ -17,8 +17,7 @@ async function takeLinkRegistry(linkId) {
   var rows = await db.deleteLinkRegistry(linkId);
   return rows.length ? {
     chatId: rows[0].chat_id,
-    isFromSource: rows[0].from_source,
-    needAdmin: rows[0].need_admin
+    isFromSource: rows[0].from_source
   } : null;
 }
 
