@@ -17,6 +17,16 @@ module.exports = {
             ]
         }
     },
+    selectChat(linkId) {
+        return  {
+            reply_markup: {
+                inline_keyboard: [[{
+                    text: text.selectChat.button,
+                    switch_inline_query: 'link ' + linkId
+                }]]
+            }
+        };
+    },
     noPreview: {
         disable_web_page_preview: true
     }
