@@ -5,6 +5,7 @@ module.exports = {
   connect,
   createSchema,
   close,
+  query,
   getLinks,
   countLinks,
   putLink,
@@ -12,6 +13,10 @@ module.exports = {
   putLinkRegistry,
   deleteLinkRegistry
 };
+
+function query(sql) {
+  return pool.query(sql);
+}
 
 function getLinks(source) {
   return pool.query('SELECT target FROM links WHERE source = $1', [source])
