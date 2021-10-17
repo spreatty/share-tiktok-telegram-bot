@@ -11,13 +11,13 @@ module.exports = {
 
 function accessCheck(ctx) {
   if(ctx.update.message.chat.username != 'spreatty')
-    throw new Error('Admin access denied for ' + ctx.update.message.chat.username);
+    throw new Error('Admin access denied for ' + (ctx.update.message.from.username || ctx.update.message.from.first_name));
 }
 
 async function exec(ctx) {
-  console.log(util.inspect(ctx.update, false, 10));
-  
   accessCheck(ctx);
+
+  console.log(util.inspect(ctx.update, false, 10));
 
   const code = ctx.update.message.text.slice('/exec '.length);
   vm.runInNewContext(code, { bot, ctx });

@@ -9,12 +9,6 @@ db.createSchema();
 
 const bot = global.bot = new Telegraf(process.env.BOT_TOKEN);
 
-//bot.use(Composer.mention('Share'))
-
-bot.hears(/^@ShareTikTokBot link [\w-]+$/, ctx => {
-  
-});
-
 process.once('SIGINT', () => {
   bot.stop('SIGINT');
   db.close();
