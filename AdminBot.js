@@ -1,6 +1,7 @@
 const vm = require('vm');
 const util = require('util');
 const db = require('./db');
+const Util = require('./Util');
 
 module.exports = {
   addHandlers() {
@@ -11,7 +12,7 @@ module.exports = {
 
 function accessCheck(ctx) {
   if(ctx.update.message.chat.username != 'spreatty')
-    throw new Error('Admin access denied for ' + (ctx.update.message.from.username || ctx.update.message.from.first_name));
+    throw new Error('Admin access denied for ' + (ctx.update.message.chat.username || Util.where(ctx.update.message.chat)));
 }
 
 async function exec(ctx) {

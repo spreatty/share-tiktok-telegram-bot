@@ -28,8 +28,8 @@ function countLinks(source, target) {
       .then(result => result.rows[0].count);
 }
 
-function putLink(source, target) {
-  return pool.query('INSERT INTO links VALUES ($1, $2)', [source, target])
+function putLink(source, target, sourceName, targetName) {
+  return pool.query('INSERT INTO links VALUES ($1, $2, $3, $4)', [source, target, sourceName, targetName])
       .then(result => result.rows);
 }
 
@@ -38,8 +38,8 @@ function getLinkRegistry(chatId, isFromSource) {
       .then(result => result.rows);
 }
 
-function putLinkRegistry(chatId, isFromSource) {
-  return pool.query('INSERT INTO link_registry (chat_id, from_source) VALUES ($1, $2) RETURNING id', [chatId, isFromSource])
+function putLinkRegistry(chatId, chatName, isFromSource) {
+  return pool.query('INSERT INTO link_registry (chat_id, chat_name, from_source) VALUES ($1, $2, $3) RETURNING id', [chatId, chatName, isFromSource])
       .then(result => result.rows);
 }
 
@@ -61,11 +61,14 @@ function createSchema() {
     CREATE TABLE IF NOT EXISTS links (
       source VARCHAR(30) NOT NULL,
       target VARCHAR(30) NOT NULL,
+      source_name VARCHAR(250),
+      target_name VARCHAR(250),
       PRIMARY KEY (source, target)
     );
     CREATE TABLE IF NOT EXISTS link_registry (
       id UUID DEFAULT uuid_generate_v4(),
       chat_id VARCHAR(30) NOT NULL,
+      chat_name VARCHAR(250) NOT NULL,
       from_source BOOLEAN NOT NULL,
       PRIMARY KEY (id)
     );

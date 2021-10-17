@@ -2,6 +2,7 @@ const { registerLink, takeLinkRegistry, link } = require('./LinkUtil');
 const util = require('util');
 const text = require('./text');
 const props = require('./props');
+const Util = require('./Util');
 
 module.exports = {
   addHandlers() {
@@ -22,20 +23,21 @@ function callbackQuery(ctx) {
   ctx.answerCbQuery();
   
   const chatId = ctx.update.callback_query.message.chat.id.toString();
+  const chatName = Util.where(ctx.update.callback_query.message.chat);
   switch(ctx.callbackQuery.data) {
     case 'source':
-      setupLink(chatId, true);
+      setupLink(chatId, chatName, true);
       break;
     case 'target':
-      setupLink(chatId, false);
+      setupLink(chatId, chatName, false);
       break;
     case 'both':
       setupForBoth(chatId);
   }
 }
 
-async function setupLink(chatId, isFromSource) {
-  const linkId = await registerLink(chatId, isFromSource);
+async function setupLink(chatId, chatName, isFromSource) {
+  const linkId = await registerLink(chatId, chatName, isFromSource);
   
   bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source'], props.selectChat(linkId));
 }
@@ -55,8 +57,11 @@ async function onLink(ctx) {
   }
   
   const chatId = ctx.update.message.chat.id.toString();
+  const chatName = Util.where(ctx.update.message.chat);
   var source = linkRegistry.chatId,
-      target = chatId;
+      target = chatId,
+      sourceName = linkRegistry.chatName,
+      targetName = chatName;
   
   if(source == target) {
     setupForBoth(source);
@@ -66,9 +71,11 @@ async function onLink(ctx) {
   if(!linkRegistry.isFromSource) {
     source = chatId;
     target = linkRegistry.chatId;
+    sourceName = chatName;
+    targetName = linkRegistry.chatName;
   }
   
-  const ok = await link(source, target);
+  const ok = await link(source, target, sourceName, targetName);
   if(!ok) {
     await ctx.reply(text.alreadyLinked);
   } else {
