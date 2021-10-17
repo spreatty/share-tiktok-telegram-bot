@@ -27,10 +27,12 @@ async function sql(ctx) {
   accessCheck(ctx);
 
   const sql = ctx.update.message.text.slice('/sql '.length);
-  const result = await db.query(sql);
-  if(!result.rows) {
-    ctx.reply('Error');
-    console.log(util.inspect(result, false, 10));
+
+  var rows;
+  try {
+    rows = await db.query(sql);
+  } catch(error) {
+    ctx.reply('Error: ' + error.message);
     return;
   }
 
@@ -40,9 +42,9 @@ async function sql(ctx) {
   }
 
   const padding = 2;
-  var columns = Object.keys(result.rows[0]);
+  var columns = Object.keys(rows[0]);
   console.log(columns);
-  var rows = result.rows.slice(0, 10);
+  var rows = rows.slice(0, 10);
   var widths = columns.map(txt => txt.length);
   rows.forEach(row => {
     Object.values(row).forEach((txt, idx) => {

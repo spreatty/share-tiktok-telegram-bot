@@ -15,7 +15,7 @@ module.exports = {
 };
 
 function query(sql) {
-  return pool.query(sql);
+  return pool.query(sql).then(result => result.rows);
 }
 
 function getLinks(source) {
