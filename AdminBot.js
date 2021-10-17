@@ -41,6 +41,7 @@ async function sql(ctx) {
 
   const padding = 2;
   var columns = Object.keys(result.rows[0]);
+  console.log(columns);
   var rows = result.rows.slice(0, 10);
   var widths = columns.map(txt => txt.length);
   rows.forEach(row => {
@@ -66,5 +67,5 @@ async function sql(ctx) {
 }
 
 function pad(txt, len) {
-  return Array(len - txt.length).fill(' ').join('');
+  return txt + Array(len - txt.length).fill(' ').join('');
 }
