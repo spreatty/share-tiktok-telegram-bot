@@ -44,7 +44,7 @@ async function sql(ctx) {
   const padding = 2;
   var columns = Object.keys(rows[0]);
   console.log(columns);
-  var rows = rows.slice(0, 10);
+  var rows = rows.slice(0, 50);
   var widths = columns.map(txt => txt.length);
   rows.forEach(row => {
     Object.values(row).forEach((txt, idx) => {
@@ -57,7 +57,7 @@ async function sql(ctx) {
 
   const head = columns.map(_pad).join('');
   const body = rows.map(row => Object.values(row).map(_pad).join('')).join('\n');
-  const msg = head + '\n' + body;
+  const msg = head + '\n\n' + body;
 
   ctx.reply(msg, {
     entities: [{
