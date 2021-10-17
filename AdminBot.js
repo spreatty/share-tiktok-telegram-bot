@@ -41,22 +41,18 @@ async function sql(ctx) {
     return;
   }
 
+  var rows = rows.slice(0, 50).map(row => Object.values(row).map(val => val.toString()));
+
   const padding = 2;
   var columns = Object.keys(rows[0]);
   console.log(columns);
-  var rows = rows.slice(0, 50);
   var widths = columns.map(txt => txt.length);
-  rows.forEach(row => {
-    Object.values(row).forEach((txt, idx) => {
-      if(txt.length > widths[idx])
-        widths[idx] = txt.length;
-    });
-  });
+  rows.forEach(row => row.forEach((txt, idx) => txt.length > widths[idx] && (widths[idx] = txt.length)));
 
   const _pad = (txt, idx) => pad(txt, widths[idx] + padding);
 
   const head = columns.map(_pad).join('');
-  const body = rows.map(row => Object.values(row).map(_pad).join('')).join('\n');
+  const body = rows.map(row => row.map(_pad).join('')).join('\n');
   const msg = head + '\n\n' + body;
 
   ctx.reply(msg, {
