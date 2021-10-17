@@ -8,6 +8,10 @@ module.exports = {
     bot.command('start', start);
     bot.on('callback_query', callbackQuery);
     bot.command('link', onLink);
+    bot.command('link@ShareTikTokBot', ctx => ctx.reply('Heh'));
+    bot.on('text', ctx => {
+      console.log(util.inspect(ctx.update, false, 10));
+    });
   }
 };
 
@@ -48,12 +52,7 @@ async function setupForBoth(chatId) {
 }
 
 async function onLink(ctx) {
-  const [ _, linkIdRaw ] = ctx.update.message.text.split(' ');
-  const linkId = parseInt(linkIdRaw);
-  if(isNaN(linkId)) {
-    ctx.reply(text.error.link.generic);
-    return;
-  }
+  const [ _, linkId ] = ctx.update.message.text.split(' ');
   
   const linkRegistry = await takeLinkRegistry(linkId);
   if(!linkRegistry) {
