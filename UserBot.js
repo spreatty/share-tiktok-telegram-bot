@@ -1,14 +1,16 @@
 const { registerLink, takeLinkRegistry, link } = require('./LinkUtil');
+const db = require('./db');
+const Util = require('./Util');
 const util = require('util');
 const text = require('./text');
 const props = require('./props');
-const Util = require('./Util');
 
 module.exports = {
   addHandlers() {
     bot.command('start', start);
     bot.on('callback_query', callbackQuery);
     bot.hears(/^@ShareTikTokBot link [\w-]+$/, onLink);
+    bot.command('list', list)
   }
 };
 
@@ -23,21 +25,20 @@ function callbackQuery(ctx) {
   ctx.answerCbQuery();
   
   const chatId = ctx.update.callback_query.message.chat.id.toString();
-  const chatName = Util.where(ctx.update.callback_query.message.chat);
   switch(ctx.callbackQuery.data) {
     case 'source':
-      setupLink(chatId, chatName, true);
+      setupLink(chatId, true);
       break;
     case 'target':
-      setupLink(chatId, chatName, false);
+      setupLink(chatId, false);
       break;
     case 'both':
       setupForBoth(chatId);
   }
 }
 
-async function setupLink(chatId, chatName, isFromSource) {
-  const linkId = await registerLink(chatId, chatName, isFromSource);
+async function setupLink(chatId, isFromSource) {
+  const linkId = await registerLink(chatId, isFromSource);
   
   bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source'], props.selectChat(linkId));
 }
@@ -57,11 +58,8 @@ async function onLink(ctx) {
   }
   
   const chatId = ctx.update.message.chat.id.toString();
-  const chatName = Util.where(ctx.update.message.chat);
   var source = linkRegistry.chatId,
-      target = chatId,
-      sourceName = linkRegistry.chatName,
-      targetName = chatName;
+      target = chatId;
   
   if(source == target) {
     setupForBoth(source);
@@ -71,11 +69,9 @@ async function onLink(ctx) {
   if(!linkRegistry.isFromSource) {
     source = chatId;
     target = linkRegistry.chatId;
-    sourceName = chatName;
-    targetName = linkRegistry.chatName;
   }
   
-  const ok = await link(source, target, sourceName, targetName);
+  const ok = await link(source, target);
   if(!ok) {
     await ctx.reply(text.alreadyLinked);
   } else {
@@ -93,3 +89,29 @@ async function onLink(ctx) {
   bot.telegram.sendMessage(source, text.linked.source);
   bot.telegram.sendMessage(target, text.linked.target);
 });*/
+
+async function list(ctx) {
+  const chatId = ctx.update.message.chat.id.toString();
+  const rows = db.getRelatedLinks(chatId);
+  const promises = rows.map(({ source, target }) => {
+    const type = source == target ? 'loop' : chatId == source ? 'from' : 'to';
+    const data = { type };
+    return type == 'loop' ? data : bot.telegram.getChat(type == 'from' ? target : source)
+        .then(chat => {
+          data.name = Util.where(chat);
+          return data;
+        });
+  });
+
+  const chats = await Promise.all(promises);
+  const hasLoop = chats.some(chat => chat.type == 'loop');
+  const froms = chats.filter(chat => chat.type == 'from').map(chat => chat.name);
+  const tos = chats.filter(chat => chat.type == 'to').map(chat => chat.name);
+
+  const fromMsg = froms.length && text.list.from + '\n' + froms.join('\n');
+  const toMsg = tos.length && text.list.to + '\n' + tos.join('\n');
+  const loopMsg = hasLoop && text.list.loop;
+  const msg = [fromMsg, toMsg, loopMsg].filter(str => str).join('\n\n');
+
+  ctx.reply(msg);
+}
