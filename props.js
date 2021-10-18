@@ -6,13 +6,13 @@ module.exports = {
             inline_keyboard: [
                 [{
                     text: text.whatForOptions.source,
-                    callback_data: 'source'
+                    callback_data: 'link source'
                 }], [{
                     text: text.whatForOptions.target,
-                    callback_data: 'target'
+                    callback_data: 'link target'
                 }], [{
                     text: text.whatForOptions.both,
-                    callback_data: 'both'
+                    callback_data: 'link both'
                 }]
             ]
         }
