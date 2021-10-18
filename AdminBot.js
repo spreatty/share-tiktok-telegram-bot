@@ -21,7 +21,7 @@ async function exec(ctx) {
   console.log(util.inspect(ctx.update, false, 10));
 
   const code = ctx.update.message.text.slice('/exec '.length);
-  vm.runInNewContext(code, { bot, ctx, db });
+  vm.runInNewContext(code, { bot, ctx, db, console });
 }
 
 async function sql(ctx) {
