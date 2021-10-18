@@ -1,5 +1,5 @@
 module.exports = {
-    get(text, params) {
+    get(text, ...params) {
         for(var i = 0; i < params.length; ++i)
             text = text.replace(new RegExp(`\\$${i + 1}`, 'g'), params[i]);
         return text;
