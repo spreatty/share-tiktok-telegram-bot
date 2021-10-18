@@ -10,6 +10,7 @@ module.exports = {
   getRelatedLinks,
   countLinks,
   putLink,
+  deleteLink,
   getLinkRegistry,
   putLinkRegistry,
   deleteLinkRegistry
@@ -36,6 +37,11 @@ function countLinks(source, target) {
 
 function putLink(source, target) {
   return pool.query('INSERT INTO links VALUES ($1, $2)', [source, target])
+      .then(result => result.rows);
+}
+
+function deleteLink(source, target) {
+  return pool.query('DELETE FROM links WHERE source = $1 AND target = $2 RETURNING *', [source, target])
       .then(result => result.rows);
 }
 

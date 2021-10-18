@@ -1,6 +1,5 @@
-const { registerLink, takeLinkRegistry, link } = require('./LinkUtil');
+const { registerLink, takeLinkRegistry, link, list } = require('./LinkUtil');
 const db = require('./db');
-const Util = require('./Util');
 const util = require('util');
 const text = require('./text');
 const props = require('./props');
@@ -10,7 +9,8 @@ module.exports = {
     bot.command('start', start);
     bot.on('callback_query', callbackQuery);
     bot.hears(/^@ShareTikTokBot link [\w-]+$/, onLink);
-    bot.command('list', list)
+    bot.command('list', onList);
+    bot.command('unlink', unlink);
   }
 };
 
@@ -25,7 +25,19 @@ function callbackQuery(ctx) {
   ctx.answerCbQuery();
   
   const chatId = ctx.update.callback_query.message.chat.id.toString();
-  switch(ctx.callbackQuery.data) {
+  const [ command, ...params ] = ctx.callbackQuery.data.split(' ');
+  switch(command) {
+    case 'link':
+      cbLink(ctx, chatId, params);
+      break;
+    case 'unlink':
+      cbUnlink(ctx, chatId, params);
+      break;
+  }
+}
+
+function cbLink(_, chatId, [ action ]) {
+  switch(action) {
     case 'source':
       setupLink(chatId, true);
       break;
@@ -34,6 +46,24 @@ function callbackQuery(ctx) {
       break;
     case 'both':
       setupForBoth(chatId);
+  }
+}
+
+async function cbUnlink(ctx, chatId, [ dir, linkedChatId, ...name ]) {
+  name = name.join(' ');
+
+  switch(dir) {
+    case 'loop':
+      const rows = await db.deleteLink(chatId, chatId);
+      ctx.reply(rows.length ? text.unlinked.loop : text.notLinkedLoop);
+      break;
+    case 'from':
+      const rows = await db.deleteLink(chatId, linkedChatId);
+      ctx.reply(text.get(rows.length ? text.unlinked.from : text.notLinked, name));
+      break;
+    case 'to':
+      const rows = await db.deleteLink(linkedChatId, chatId);
+      ctx.reply(text.get(rows.length ? text.unlinked.to : text.notLinked, name));
   }
 }
 
@@ -82,37 +112,42 @@ async function onLink(ctx) {
   }
 }
 
-/*bot.command('unlink', async ctx => {
+async function onList(ctx) {
   const chatId = ctx.update.message.chat.id.toString();
-  const rows = await pool.query('DELETE FROM links WHERE source = $1 OR target = $1 RETURNING *', [chatId]);
-  
-  bot.telegram.sendMessage(source, text.linked.source);
-  bot.telegram.sendMessage(target, text.linked.target);
-});*/
+  const { from, to, loop } = await list(chatId);
 
-async function list(ctx) {
-  const chatId = ctx.update.message.chat.id.toString();
-  const rows = await db.getRelatedLinks(chatId);
-  
-  const promises = rows.map(({ source, target }) => {
-    const type = source == target ? 'loop' : chatId == source ? 'from' : 'to';
-    const data = { type };
-    return type == 'loop' ? data : bot.telegram.getChat(type == 'from' ? target : source)
-        .then(chat => {
-          data.name = Util.where(chat);
-          return data;
-        });
-  });
-
-  const chats = await Promise.all(promises);
-  const hasLoop = chats.some(chat => chat.type == 'loop');
-  const froms = chats.filter(chat => chat.type == 'from').map(chat => chat.name);
-  const tos = chats.filter(chat => chat.type == 'to').map(chat => chat.name);
-
-  const fromMsg = froms.length && text.list.from + '\n' + froms.join('\n');
-  const toMsg = tos.length && text.list.to + '\n' + tos.join('\n');
-  const loopMsg = hasLoop && text.list.loop;
-  const msg = [fromMsg, toMsg, loopMsg].filter(str => str).join('\n\n');
+  const fromMsg = from.length && text.list.from + '\n' + from.map(link => link.name).join('\n');
+  const toMsg = to.length && text.list.to + '\n' + to.map(link => link.name).join('\n');
+  const loopMsg = loop && text.list.loop;
+  const msg = [toMsg, fromMsg, loopMsg].filter(str => str).join('\n\n');
 
   ctx.reply(msg);
+}
+
+async function unlink(ctx) {
+  const chatId = ctx.update.message.chat.id.toString();
+  const { from, to, loop } = await list(chatId);
+
+  if(loop)
+    await ctx.reply(text.unlink.loop, props.unlinkLoop);
+
+  if(from.length)
+    await ctx.reply(text.unlink.from, {
+      reply_markup: {
+        inline_keyboard: from.map(link => [{
+          text: link.name,
+          callback_data: `unlink from ${link.chatId} ${link.name}`
+        }])
+      }
+    });
+  
+  if(to.length)
+    await ctx.reply(text.unlink.to, {
+      reply_markup: {
+        inline_keyboard: to.map(link => [{
+          text: link.name,
+          callback_data: `unlink to ${link.chatId} ${link.name}`
+        }])
+      }
+    });
 }

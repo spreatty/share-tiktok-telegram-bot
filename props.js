@@ -27,6 +27,21 @@ module.exports = {
             }
         };
     },
+    unlinkLoop: {
+        reply_markup: {
+            inline_keyboard: [[{
+                text: text.unlink.button,
+                callback_data: `unlink loop`
+            }]]
+        }
+    },
+    buttons(buttons) {
+        return {
+            reply_markup: {
+                inline_keyboard: buttons
+            }
+        };
+    },
     noPreview: {
         disable_web_page_preview: true
     }

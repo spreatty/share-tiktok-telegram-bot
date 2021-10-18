@@ -1,6 +1,5 @@
 module.exports = {
-    get(textId, params) {
-        var text = this[textId];
+    get(text, params) {
         for(var i = 0; i < params.length; ++i)
             text = text.replace(new RegExp(`\\$${i + 1}`, 'g'), params[i]);
         return text;
@@ -24,13 +23,24 @@ module.exports = {
     },
     alreadyLinked: "Вибрані чати вже з'єднано. Продовжуй користуватись.",
     alreadyLinkedSelf: "Цей чат вже налаштовано. Продовжуй користуватись.",
-    unlinked: "1 чат від'єднано.",
-    unlinkedSelf: "Чат від'єднано.",
+    unlinked: {
+        from: "Цей чат більше не надсилатиме до $1.",
+        to: "Цей чат більше не отримуватиме з $1.",
+        loop: "Чат від'єднано."
+    },
+    notLinked: "Чат $1 вже від'єднали раніше.",
+    notLinkedLoop: "Цей чат вже від'єднали раніше.",
     from: 'Від ',
     list: {
         to: "Цей чат отримує від:",
         from: "З цього чату отримують:",
         loop: "Також цей чат під'єднано до самого себе."
+    },
+    unlink: {
+        to: "Не отримувати від:",
+        from: "Не надсилати до:",
+        loop: "Від'єднати від самого себе.",
+        button: "Від'єднати"
     },
 
     error: {
