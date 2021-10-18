@@ -93,6 +93,8 @@ async function onLink(ctx) {
 async function list(ctx) {
   const chatId = ctx.update.message.chat.id.toString();
   const rows = Array.from(db.getRelatedLinks(chatId));
+  console.log(rows);
+
   const promises = rows.map(({ source, target }) => {
     const type = source == target ? 'loop' : chatId == source ? 'from' : 'to';
     const data = { type };
