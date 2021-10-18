@@ -11,6 +11,7 @@ module.exports = {
     bot.hears(/^@ShareTikTokBot link [\w-]+$/, onLink);
     bot.command('list', onList);
     bot.command('unlink', unlink);
+    bot.hears('Угадайте, в какой коробке хуй.', playDickFind);
   }
 };
 
@@ -151,4 +152,9 @@ async function unlink(ctx) {
         }])
       }
     });
+}
+
+async function playDickFind(ctx) {
+  console.log(util.inspect(ctx.update, false, 10));
+  //ctx.reply_markup.inline_keyboard.flatMap(row => row);
 }
