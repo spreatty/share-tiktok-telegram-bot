@@ -120,7 +120,7 @@ async function onList(ctx) {
   const fromMsg = from.length && text.list.from + '\n' + from.map(link => link.name).join('\n');
   const toMsg = to.length && text.list.to + '\n' + to.map(link => link.name).join('\n');
   const loopMsg = loop && text.list.loop;
-  const msg = [toMsg, fromMsg, loopMsg].filter(str => str).join('\n\n');
+  const msg = [loopMsg, toMsg, fromMsg].filter(str => str).join('\n\n');
 
   ctx.reply(msg);
 }
