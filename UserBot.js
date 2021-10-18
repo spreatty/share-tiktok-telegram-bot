@@ -51,19 +51,20 @@ function cbLink(_, chatId, [ action ]) {
 
 async function cbUnlink(ctx, chatId, [ dir, linkedChatId, ...name ]) {
   name = name.join(' ');
+  var didDelete;
 
   switch(dir) {
     case 'loop':
-      const rows = await db.deleteLink(chatId, chatId);
-      ctx.reply(rows.length ? text.unlinked.loop : text.notLinkedLoop);
+      didDelete = (await db.deleteLink(chatId, chatId)).length;
+      ctx.reply(didDelete ? text.unlinked.loop : text.notLinkedLoop);
       break;
     case 'from':
-      const rows = await db.deleteLink(chatId, linkedChatId);
-      ctx.reply(text.get(rows.length ? text.unlinked.from : text.notLinked, name));
+      didDelete = (await db.deleteLink(chatId, linkedChatId)).length;
+      ctx.reply(text.get(didDelete ? text.unlinked.from : text.notLinked, name));
       break;
     case 'to':
-      const rows = await db.deleteLink(linkedChatId, chatId);
-      ctx.reply(text.get(rows.length ? text.unlinked.to : text.notLinked, name));
+      didDelete = (await db.deleteLink(linkedChatId, chatId)).length;
+      ctx.reply(text.get(didDelete ? text.unlinked.to : text.notLinked, name));
   }
 }
 
