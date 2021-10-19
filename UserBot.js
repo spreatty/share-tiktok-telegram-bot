@@ -21,8 +21,6 @@ function start(ctx) {
 }
 
 function callbackQuery(ctx) {
-  //console.log(util.inspect(ctx.update, false, 10));
-  
   ctx.answerCbQuery();
   
   const chatId = ctx.update.callback_query.message.chat.id.toString();
@@ -155,6 +153,5 @@ async function unlink(ctx) {
 }
 
 async function playDickFind(ctx) {
-  console.log(util.inspect(ctx.update, false, 10));
   //ctx.reply_markup.inline_keyboard.flatMap(row => row);
 }
