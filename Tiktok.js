@@ -31,7 +31,7 @@ async function onTiktok({ update }) {
   
   console.log('URL: ' + tiktokUrl);
 
-  const cachedVideo = (await db.getVideoByUrl(tiktokUrl))[0];
+  const cachedVideo = (await db.getVideoByUrl(tiktokUrl.toString()))[0];
   if(cachedVideo) {
     videoExtra.width = cachedVideo.width;
     videoExtra.height = cachedVideo.height;
@@ -58,7 +58,7 @@ async function sendAndSaveVideo([ first, ...rest ], videoData, videoExtra, urls)
   const fileId = response.video.file_id;
   db.putVideo(fileId, videoExtra.width, videoExtra.height);
   rest.forEach(target => bot.telegram.sendVideo(target, fileId, videoExtra));
-  urls.forEach(url => db.putUrlRecord(url, fileId));
+  urls.forEach(url => db.putUrlRecord(url.toString(), fileId));
 }
 
 async function sendDocument([ first, ...rest ], originalText, docData) {
