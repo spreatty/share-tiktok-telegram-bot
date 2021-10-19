@@ -9,7 +9,8 @@ db.connect();
 db.createSchema();
 
 const bot = global.bot = new Telegraf(process.env.BOT_TOKEN);
-bot.on('text', (ctx, next) => {
+
+bot.use((ctx, next) => {
   console.log(util.inspect(ctx.update, false, 10));
   next();
 });

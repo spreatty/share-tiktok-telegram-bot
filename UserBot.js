@@ -11,7 +11,7 @@ module.exports = {
     bot.hears(/^@ShareTikTokBot link [\w-]+$/, onLink);
     bot.command('list', onList);
     bot.command('unlink', unlink);
-    bot.hears('Угадайте, в какой коробке хуй.', playDickFind);
+    //bot.hears('Угадайте, в какой коробке хуй.', playDickFind);
   }
 };
 
@@ -21,7 +21,7 @@ function start(ctx) {
 }
 
 function callbackQuery(ctx) {
-  console.log(util.inspect(ctx.update, false, 10));
+  //console.log(util.inspect(ctx.update, false, 10));
   
   ctx.answerCbQuery();
   
