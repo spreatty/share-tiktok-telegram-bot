@@ -16,11 +16,9 @@ function isTiktokUrl(url) {
 
 async function onTiktok({ update }) {
   const source = update.message.chat.id.toString();
-  var targets = await db.getTargets(source);
-  if(!rows.length)
+  const targets = (await db.getTargets(source)).map(row => row.target);
+  if(!targets.length)
     return;
-
-  targets = rows.map(row => row.target);
 
   const from = Util.getFullName(update.message.from);
   const videoExtra = {
