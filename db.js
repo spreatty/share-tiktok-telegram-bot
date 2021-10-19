@@ -14,8 +14,9 @@ module.exports = {
   getLinkRegistry,
   putLinkRegistry,
   deleteLinkRegistry,
-  getVideo,
-  putVideo
+  getVideoByUrl,
+  putVideo,
+  putUrlRecord
 };
 
 function query(sql) {
@@ -62,13 +63,18 @@ function deleteLinkRegistry(linkId) {
       .then(result => result.rows);
 }
 
-function getVideo(url) {
-  return pool.query('UPDATE videos SET used = used + 1, touched = CURRENT_TIMESTAMP WHERE url = $1 RETURNING file_id, width, height', [url])
+function getVideoByUrl(url) {
+  return pool.query('UPDATE videos SET used = used + 1, touched = CURRENT_TIMESTAMP WHERE file_id = (SELECT file_id FROM urls WHERE url = $1) RETURNING file_id, width, height', [url])
       .then(result => result.rows);
 }
 
-function putVideo(url, fileId, width, height) {
-  return pool.query('INSERT INTO videos (url, file_id, width, height) VALUES ($1, $2, $3, $4)', [url, fileId, width, height])
+function putVideo(fileId, width, height) {
+  return pool.query('INSERT INTO videos (file_id, width, height) VALUES ($1, $2, $3)', [fileId, width, height])
+      .then(result => result.rows);
+}
+
+function putUrlRecord(url, fileId) {
+  return pool.query('INSERT INTO urls (url, file_id) VALUES ($1, $2)', [url, fileId])
       .then(result => result.rows);
 }
 
@@ -94,13 +100,17 @@ function createSchema() {
       PRIMARY KEY (id)
     );
     CREATE TABLE IF NOT EXISTS videos (
-      url VARCHAR(250) PRIMARY KEY,
-      file_id VARCHAR(250) NOT NULL,
+      file_id VARCHAR(250) PRIMARY KEY,
       width INTEGER NOT NULL,
       height INTEGER NOT NULL,
       used INTEGER NOT NULL DEFAULT 1,
       created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       touched TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS urls (
+      url VARCHAR(250) PRIMARY KEY,
+      file_id VARCHAR(250) NOT NULL,
+      CONSTRAINT fk_video FOREIGN KEY(file_id) REFERENCES videos(file_id)
     );
   `);
 }
