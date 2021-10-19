@@ -63,7 +63,7 @@ function deleteLinkRegistry(linkId) {
 }
 
 function getVideo(url) {
-  return pool.query('UPDATE videos SET used = used + 1 WHERE url = $1 RETURNING file_id, width, height', [url])
+  return pool.query('UPDATE videos SET used = used + 1, touched = CURRENT_TIMESTAMP WHERE url = $1 RETURNING file_id, width, height', [url])
       .then(result => result.rows);
 }
 
