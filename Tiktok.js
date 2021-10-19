@@ -1,4 +1,5 @@
 const TiktokFetcher = require('./TiktokFetcher');
+const Util = require('./Util');
 const text = require('./text');
 const props = require('./props');
 const db = require('./db');
@@ -15,50 +16,58 @@ function isTiktokUrl(url) {
 
 async function onTiktok({ update }) {
   const source = update.message.chat.id.toString();
-  const rows = await db.getTargets(source);
+  var targets = await db.getTargets(source);
   if(!rows.length)
     return;
-  
-  const targets = rows.map(row => row.target);
 
-  const tiktokUrl = update.message.entities
-      .filter(({ type }) => type == 'url')
-      .map(({ offset, length }) => update.message.text.slice(offset, offset + length))
-      .find(isTiktokUrl);
+  targets = rows.map(row => row.target);
+
+  const from = Util.getFullName(update.message.from);
+  const videoExtra = {
+    caption: text.from + from,
+    caption_entities: [{ type: 'bold', offset: text.from.length, length: from.length }]
+  };
+
+  const tiktokUrl = new URL(Util.getUrls(update.message.entities, update.message.entities).find(isTiktokUrl));
+  tiktokUrl.search = '';
   
   console.log('URL: ' + tiktokUrl);
 
-  var name = update.message.from.first_name;
-  if(update.message.from.last_name)
-    name += ' ' + update.message.from.last_name;
-  
-  const caption = text.from + name;
-  const captionEntities = [{ type: 'bold', offset: text.from.length, length: name.length }];
+  const cachedVideo = (await db.getVideo(tiktokUrl))[0];
+  if(cachedVideo) {
+    videoExtra.width = cachedVideo.width;
+    videoExtra.height = cachedVideo.height;
+    const fileId = cachedVideo.file_id;
+    targets.forEach(target => bot.telegram.sendVideo(target, fileId, videoExtra));
+    return;
+  }
 
   new TiktokFetcher(tiktokUrl)
-      .on('success', (videoStream, { width, height }) => {
-        const extraData = { width, height, caption, caption_entities: captionEntities };
-        broadcast(targets,
-            target => bot.telegram.sendVideo(target, { source: videoStream }, extraData),
-            (target, fileId) => bot.telegram.sendVideo(target, fileId, extraData));
+      .on('success', (videoStream, { width, height }, urls) => {
+        videoExtra.width = width;
+        videoExtra.height = height;
+        sendAndSaveVideo(targets, { source: videoStream }, videoExtra, urls);
       })
       .on('fail', data => {
         console.log('Failed to retrieve the video. Forwarding original message and sending received html');
-        const forwardMsg = () => bot.telegram.sendMessage(target, update.message.text, props.noPreview);
-
-        broadcast(targets,
-          target => forwardMsg().then(() =>
-              bot.telegram.sendDocument(target, { source: Buffer.from(data), filename: 'tiktok.html' })),
-          (target, fileId) => forwardMsg().then(() =>
-              bot.telegram.sendDocument(target, fileId)));
+        sendDocument(targets, update.message.text, { source: Buffer.from(data), filename: 'tiktok.html' });
       })
       .fetch();
 }
 
-async function broadcast(targets, sendFirst, sendKnown) {
-  const [ first, ...rest ] = targets;
-  const res = await sendFirst(first);
-  const fileId = res.video ? res.video.file_id : res.document.file_id;
-  console.log('Generated file id ' + fileId);
-  rest.forEach(target => sendKnown(target, fileId));
+async function sendAndSaveVideo([ first, ...rest ], videoData, videoExtra, urls) {
+  const response = await bot.telegram.sendVideo(first, videoData, videoExtra);
+  const fileId = response.video.file_id;
+  rest.forEach(target => bot.telegram.sendVideo(target, fileId, videoExtra));
+  urls.forEach(url => db.putVideo(url, fileId, videoExtra.width, videoExtra.height));
+}
+
+async function sendDocument([ first, ...rest ], originalText, docData) {
+  await bot.telegram.sendMessage(first, originalText, props.noPreview);
+  const response = await bot.telegram.sendDocument(first, docData);
+  const fileId = response.document.file_id;
+  rest.forEach(async target => {
+    await bot.telegram.sendMessage(target, originalText, props.noPreview);
+    bot.telegram.sendDocument(target, fileId);
+  });
 }

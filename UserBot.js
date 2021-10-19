@@ -1,6 +1,5 @@
 const { registerLink, takeLinkRegistry, link, list } = require('./LinkUtil');
 const db = require('./db');
-const util = require('util');
 const text = require('./text');
 const props = require('./props');
 
@@ -11,7 +10,6 @@ module.exports = {
     bot.hears(/^@ShareTikTokBot link [\w-]+$/, onLink);
     bot.command('list', onList);
     bot.command('unlink', unlink);
-    //bot.hears('Угадайте, в какой коробке хуй.', playDickFind);
   }
 };
 
@@ -150,8 +148,4 @@ async function unlink(ctx) {
         }])
       }
     });
-}
-
-async function playDickFind(ctx) {
-  //ctx.reply_markup.inline_keyboard.flatMap(row => row);
 }

@@ -24,8 +24,12 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
     for(var i = 1; i <= retriesCount && !videoConfigRaw; ++i) {
       console.log(`Attempt #${i} ${actualUrl}`);
-      ({ stackUrl, data } = await httpGet(actualUrl, commonHeaders));
-      actualUrl = stackUrl[0];
+      const response = await httpGet(actualUrl, commonHeaders, true);
+      data = response.data;
+      if(!stackUrl) {
+        stackUrl = response.stackUrl;
+        actualUrl = stackUrl[0];
+      }
       videoConfigRaw = data.match(videoConfigRegex)?.find(match => match.includes(urlKey));
     }
 
@@ -43,7 +47,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
     const videoUrl = new URL(videoConfig[urlKey]);
     console.log('Loading video ' + videoUrl);
     const videoStream = await httpsGet(videoUrl, { ...commonHeaders, Referer: videoUrl });
-    this.emit('success', videoStream, videoConfig);
+    this.emit('success', videoStream, videoConfig, stackUrl);
   }
 };
 
@@ -56,15 +60,17 @@ function parseVideoConfig(rawConfig) {
   }
 }
 
-async function httpGet(url, headers) {
+async function httpGet(url, headers, stripSearchParams) {
   url = new URL(url);
+  if(stripSearchParams)
+    url.search = '';
   const method = http2Hosts.includes(url.hostname) ? http2Get : httpsGet;
   const response = await method(url, headers);
   const redirect = response.headers.location;
   if(redirect) {
     console.log('Redirect to ' + redirect);
     response.close();
-    const result = await httpGet(redirect, headers);
+    const result = await httpGet(redirect, headers, stripSearchParams);
     result.stackUrl.push(url);
     return result;
   } else {

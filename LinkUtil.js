@@ -45,7 +45,7 @@ async function list(chatId) {
       chatId: type == 'from' ? target : source
     };
     return type == 'loop' ? link : bot.telegram.getChat(link.chatId)
-        .then(chat => { link.name = Util.where(chat); return link; });
+        .then(chat => { link.name = Util.getChatTitle(chat); return link; });
   });
 
   const chats = await Promise.all(promises);

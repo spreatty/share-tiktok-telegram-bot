@@ -12,7 +12,7 @@ module.exports = {
 
 function accessCheck(ctx) {
   if(ctx.update.message.chat.username != 'spreatty')
-    throw new Error('Admin access denied for ' + (ctx.update.message.chat.username || Util.where(ctx.update.message.chat)));
+    throw new Error('Admin access denied for ' + (ctx.update.message.chat.username || Util.getChatTitle(ctx.update.message.chat)));
 }
 
 async function exec(ctx) {

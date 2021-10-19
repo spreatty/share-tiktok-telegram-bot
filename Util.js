@@ -1,12 +1,19 @@
 module.exports = {
-  where,
-  name
+  getChatTitle,
+  getFullName,
+  getUrls
 };
 
-function where(chat) {
-  return chat.title || name(chat);
+function getChatTitle(chat) {
+  return chat.title || getFullName(chat);
 }
 
-function name(chat) {
-  return chat.first_name + (chat.last_name ? ' ' + chat.last_name : '');
+function getFullName(nameData) {
+  return nameData.first_name + (nameData.last_name ? ' ' + nameData.last_name : '');
+}
+
+function getUrls(entities, text) {
+  return entities
+      .filter(entity => entity.type == 'url')
+      .map(({ offset, length }) => text.slice(offset, offset + length));
 }

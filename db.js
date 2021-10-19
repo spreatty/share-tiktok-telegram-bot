@@ -13,7 +13,9 @@ module.exports = {
   deleteLink,
   getLinkRegistry,
   putLinkRegistry,
-  deleteLinkRegistry
+  deleteLinkRegistry,
+  getVideo,
+  putVideo
 };
 
 function query(sql) {
@@ -60,6 +62,16 @@ function deleteLinkRegistry(linkId) {
       .then(result => result.rows);
 }
 
+function getVideo(url) {
+  return pool.query('UPDATE videos SET used = used + 1 WHERE url = $1 RETURNING file_id, width, height', [url])
+      .then(result => result.rows);
+}
+
+function putVideo(url, fileId, width, height) {
+  return pool.query('INSERT INTO videos (url, file_id, width, height) VALUES ($1, $2, $3, $4)', [url, fileId, width, height])
+      .then(result => result.rows);
+}
+
 function connect() {
   return pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -80,6 +92,13 @@ function createSchema() {
       chat_id VARCHAR(30) NOT NULL,
       from_source BOOLEAN NOT NULL,
       PRIMARY KEY (id)
+    );
+    CREATE TABLE IF NOT EXISTS videos (
+      url VARCHAR(250) PRIMARY KEY,
+      file_id VARCHAR(250) NOT NULL,
+      width INTEGER NOT NULL,
+      height INTEGER NOT NULL,
+      used INTEGER NOT NULL DEFAULT 1
     );
   `);
 }
