@@ -36,6 +36,7 @@ async function onTiktok({ update }) {
     videoExtra.width = cachedVideo.width;
     videoExtra.height = cachedVideo.height;
     const fileId = cachedVideo.file_id;
+    console.log('Found in database. File id: ' + fileId);
     targets.forEach(target => bot.telegram.sendVideo(target, fileId, videoExtra));
     return;
   }
