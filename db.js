@@ -98,7 +98,9 @@ function createSchema() {
       file_id VARCHAR(250) NOT NULL,
       width INTEGER NOT NULL,
       height INTEGER NOT NULL,
-      used INTEGER NOT NULL DEFAULT 1
+      used INTEGER NOT NULL DEFAULT 1,
+      created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      touched TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
 }
