@@ -27,11 +27,14 @@ async function onTiktok({ update }) {
   };
 
   const tiktokUrl = new URL(Util.getUrls(update.message.entities, update.message.text).find(isTiktokUrl));
-  tiktokUrl.search = '';
+  const tiktokLookupUrl = new URL(tiktokUrl);
+  tiktokLookupUrl.search = '';
   
+  console.log('Lookup URL: ' + tiktokLookupUrl);
   console.log('URL: ' + tiktokUrl);
 
-  const cachedVideo = (await db.getVideoByUrl(tiktokUrl.toString()))[0];
+
+  const cachedVideo = (await db.getVideoByUrl(tiktokLookupUrl.toString()))[0];
   if(cachedVideo) {
     videoExtra.width = cachedVideo.width;
     videoExtra.height = cachedVideo.height;
