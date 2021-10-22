@@ -3,12 +3,12 @@ const http2 = require('http2');
 const EventEmitter = require('events');
 
 const http2Hosts = [
-  //'m.tiktok.com',
+  'm.tiktok.com',
   'www.tiktok.com'
 ];
 const commonHeaders = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
-  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9'
 };
 const videoConfigRegex = /"video":(\{.*?\})/g;
 const urlKey = 'playAddr';
@@ -24,6 +24,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
   async fetch() {
     const stackUrl = new Set();
+    const headers = { ...commonHeaders };
     var data, videoConfigRaw;
     var actualUrl = this.#url;
 
@@ -31,7 +32,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
       if(i > 1)
         await new Promise(resolve => setTimeout(resolve, 100));
       console.log(`Attempt #${i} ${actualUrl}`);
-      const response = await httpGet(actualUrl, commonHeaders, true);
+      const response = await httpGet(actualUrl, headers, true);
       data = response.data;
       const newUrl = response.stackUrl[0].toString();
       if(actualUrl != newUrl) {
@@ -61,7 +62,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
     const videoUrl = new URL(videoConfig[urlKey]);
     console.log('Loading video ' + videoUrl);
-    const videoStream = await httpsGet(videoUrl, { ...commonHeaders, Referer: videoUrl });
+    const videoStream = await httpsGet(videoUrl, { ...headers, Referer: videoUrl });
     this.emit('success', videoStream, videoConfig, stackUrl);
   }
 };
@@ -79,6 +80,8 @@ async function httpGet(url, headers) {
   url = new URL(url);
   const method = http2Hosts.includes(url.hostname) ? http2Get : httpsGet;
   const response = await method(url, headers);
+  if(response.headers['set-cookie'])
+    headers.cookie = response.headers['set-cookie'].map(cookie => cookie.split(';')[0]).join('; ');
   const redirect = response.headers.location;
   if(redirect) {
     console.log('Redirect to ' + redirect);
@@ -124,7 +127,6 @@ function http2Get(url, headers) {
               ':scheme': 'https',
               ':authority': url.hostname,
               ':path': url.pathname + url.search,
-              Host: url.hostname,
               ...headers
             })
                 .on('error', err => {
