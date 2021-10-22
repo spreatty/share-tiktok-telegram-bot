@@ -25,11 +25,15 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
     for(var i = 1; i <= retriesCount && !videoConfigRaw; ++i) {
       if(i > 1)
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
       console.log(`Attempt #${i} ${actualUrl}`);
       const response = await httpGet(actualUrl, commonHeaders, true);
       data = response.data;
-      actualUrl = response.stackUrl[0];
+      const newUrl = response.stackUrl[0].toString();
+      if(actualUrl != newUrl) {
+        actualUrl = newUrl;
+        i = 0;
+      }
       response.stackUrl.forEach(url => {
         const urlNoSearch = new URL(url);
         urlNoSearch.search = '';

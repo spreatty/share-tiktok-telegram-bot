@@ -26,7 +26,7 @@ async function onTiktok({ update }) {
     caption_entities: [{ type: 'bold', offset: text.from.length, length: from.length }]
   };
 
-  const tiktokUrl = new URL(Util.getUrls(update.message.entities, update.message.text).find(isTiktokUrl));
+  const tiktokUrl = Util.getUrls(update.message.entities, update.message.text).find(isTiktokUrl);
   const tiktokLookupUrl = new URL(tiktokUrl);
   tiktokLookupUrl.search = '';
   
