@@ -8,7 +8,7 @@ const commonHeaders = {
 };
 const videoConfigRegex = /"video":(\{.*?\})/g;
 const urlKey = 'playAddr';
-const retriesCount = 3;
+const retriesCount = 5;
 
 module.exports = class TiktokFetcher extends EventEmitter {
   #url;
@@ -31,10 +31,13 @@ module.exports = class TiktokFetcher extends EventEmitter {
       data = response.data;
       actualUrl = response.stackUrl[0];
       response.stackUrl.forEach(url => {
-        url.search = '';
-        stackUrl.add(url.toString());
+        const urlNoSearch = new URL(url);
+        urlNoSearch.search = '';
+        stackUrl.add(urlNoSearch.toString());
       });
       videoConfigRaw = data.match(videoConfigRegex)?.find(match => match.includes(urlKey));
+      if(!videoConfigRaw)
+        console.log('Bad response');
     }
 
     if(!videoConfigRaw) {
