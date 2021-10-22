@@ -12,7 +12,7 @@ const commonHeaders = {
 };
 const videoConfigRegex = /"video":(\{.*?\})/g;
 const urlKey = 'playAddr';
-const retriesCount = 5;
+const retriesCount = 3;
 
 module.exports = class TiktokFetcher extends EventEmitter {
   #url;
@@ -80,8 +80,10 @@ async function httpGet(url, headers) {
   url = new URL(url);
   const method = http2Hosts.includes(url.hostname) ? http2Get : httpsGet;
   const response = await method(url, headers);
-  if(response.headers['set-cookie'])
+  if(response.headers['set-cookie']) {
     headers.cookie = response.headers['set-cookie'].map(cookie => cookie.split(';')[0]).join('; ');
+    console.log('Set cookie: ' + headers.cookie);
+  }
   const redirect = response.headers.location;
   if(redirect) {
     console.log('Redirect to ' + redirect);
