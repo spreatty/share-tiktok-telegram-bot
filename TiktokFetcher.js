@@ -4,7 +4,8 @@ const EventEmitter = require('events');
 
 const http2Hosts = ['m.tiktok.com', 'www.tiktok.com'];
 const commonHeaders = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15'
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 };
 const videoConfigRegex = /"video":(\{.*?\})/g;
 const urlKey = 'playAddr';
@@ -115,7 +116,7 @@ function http2Get(url, headers) {
           .on('error', reject)
           .on('connect', function() {
             const close = () => this.close();
-            this.request({ ':path': url.pathname, ...headers })
+            this.request({ ':path': url.pathname + url.search, ...headers })
                 .on('error', err => {
                   reject(err);
                   close();
