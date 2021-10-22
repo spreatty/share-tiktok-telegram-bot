@@ -119,7 +119,14 @@ function http2Get(url, headers) {
           .on('error', reject)
           .on('connect', function() {
             const close = () => this.close();
-            this.request({ ':path': url.pathname + url.search, ...headers })
+            this.request({
+              ':method': 'GET',
+              ':scheme': 'https',
+              ':authority': url.hostname,
+              ':path': url.pathname + url.search,
+              Host: url.hostname,
+              ...headers
+            })
                 .on('error', err => {
                   reject(err);
                   close();
