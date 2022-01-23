@@ -53,7 +53,19 @@ module.exports = class TiktokFetcher extends EventEmitter {
       return;
     }
 
-    const videoUrl = Object.values(appConfig.SIGI_STATE.ItemModule)[0].video.playAddr;
+    const moduleConfig = appConfig.SIGI_STATE?.ItemModule;
+    if(!moduleConfig) {
+      this.emit('fail', data);
+      return;
+    }
+
+    const videoConfig = Object.values(moduleConfig)[0]?.video;
+    if(!videoConfig) {
+      this.emit('fail', data);
+      return;
+    }
+
+    const videoUrl = videoConfig.playAddr;
     if(!videoUrl) {
       this.emit('fail', data);
       return;
