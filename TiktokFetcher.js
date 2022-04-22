@@ -12,7 +12,7 @@ const commonHeaders = {
   'Accept-Language': 'en-gb',
   'Accept-Encoding': 'identity'
 };
-const scriptTagRegex = /<script\s+id\s*=\s*"sigi-persisted-data"\s*>(.*?)<\/script>/;
+const scriptTagRegex = /<script\s+id\s*=\s*"SIGI_STATE"[^>]*>(.*?)<\/script>/i;
 const retriesCount = 3;
 
 module.exports = class TiktokFetcher extends EventEmitter {
@@ -53,7 +53,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
       return;
     }
 
-    const moduleConfig = appConfig.SIGI_STATE?.ItemModule;
+    const moduleConfig = appConfig.ItemModule;
     if(!moduleConfig) {
       this.emit('fail', data);
       return;
@@ -84,7 +84,8 @@ function parseAppConfig(html) {
     return;
   }
 
-  var jsonSource = '{' + scriptContent.replace(/window\[['"](.*?)['"]\]\s*=/g, '"$1":').replace(/\};/g, '},') + '}';
+  //var jsonSource = '{' + scriptContent.replace(/window\[['"](.*?)['"]\]\s*=/g, '"$1":').replace(/\};/g, '},') + '}';
+  var jsonSource = scriptContent;
   try {
     return JSON.parse(jsonSource);
   } catch(error) {
