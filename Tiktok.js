@@ -38,7 +38,7 @@ async function onTiktok({ update }) {
     const fileId = cachedVideo.file_id;
     console.log('Found in database. File id: ' + fileId);
     if(cachedVideo.slides) {
-      targets.forEach(target => bot.telegram.sendMediaGroup(target, cachedVideo.slides.map(toPhoto(extra))));
+      targets.forEach(target => bot.telegram.sendMediaGroup(target, prepareSlides(cachedVideo.slides, extra)));
     } else {
       extra.width = cachedVideo.width;
       extra.height = cachedVideo.height;
@@ -72,15 +72,11 @@ async function sendAndSaveVideo([ first, ...rest ], videoStream, extra, urls) {
 }
 
 async function sendAndSaveSlides([ first, ...rest ], slideStreams, extra, urls) {
-  const slidesData = slideStreams.map(streamToPhoto);
-  Object.assign(slidesData[0], extra);
-  const response = await bot.telegram.sendMediaGroup(first, slidesData);
-  console.log(response[0].photo);
-  return;
-  const fileId = response.photo[0].file_id;
-  const files = response.photo.map(photo => photo.file_id);
+  const response = await bot.telegram.sendMediaGroup(first, prepareSlides(slideStreams, extra, streamToPhoto));
+  const files = response.map(msg => msg.photo.slice(-1)[0].file_id);
+  const fileId = files[0];
   db.putVideo(fileId, files.join('||'));
-  rest.forEach(target => bot.telegram.sendMediaGroup(target, files.map(toPhoto(extra))));
+  rest.forEach(target => bot.telegram.sendMediaGroup(target, prepareSlides(files, extra)));
   urls.forEach(url => db.putUrlRecord(url.toString(), fileId));
 }
 
@@ -92,6 +88,12 @@ async function sendDocument([ first, ...rest ], originalText, docData) {
     await bot.telegram.sendMessage(target, originalText, props.noPreview);
     bot.telegram.sendDocument(target, fileId);
   });
+}
+
+function prepareSlides(slides, extra, converter = toPhoto) {
+  var slidesData = slides.map(converter);
+  Object.assign(slidesData[0], extra);
+  return slidesData;
 }
 
 function streamToPhoto(stream) {
