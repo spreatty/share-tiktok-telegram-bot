@@ -1,13 +1,14 @@
 const https = require('https');
 const http2 = require('http2');
 const EventEmitter = require('events');
+const { JSDOM } = require('jsdom');
 
 const http2Hosts = [
   'm.tiktok.com',
   'www.tiktok.com'
 ];
 const commonHeaders = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Safari/605.1.15',
+  'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-gb',
   'Accept-Encoding': 'identity'
@@ -26,10 +27,10 @@ module.exports = class TiktokFetcher extends EventEmitter {
   async fetch() {
     const stackUrl = new Set();
     const headers = { ...commonHeaders };
-    var data, appConfig;
+    var data, appState;
     var actualUrl = this.#url;
 
-    for(var i = 1; i <= retriesCount && !appConfig; ++i) {
+    for(var i = 1; i <= retriesCount && !appState; ++i) {
       if(i > 1)
         await new Promise(resolve => setTimeout(resolve, 100));
       console.log(`Attempt #${i} ${actualUrl}`);
@@ -45,52 +46,46 @@ module.exports = class TiktokFetcher extends EventEmitter {
         urlNoSearch.search = '';
         stackUrl.add(urlNoSearch.toString());
       });
-      appConfig = parseAppConfig(data);
+      appState = parseHtml(data);
     }
 
-    if(!appConfig) {
+    if(!appState) {
       this.emit('fail', data);
       return;
     }
 
-    const moduleConfig = appConfig.ItemModule;
-    if(!moduleConfig) {
-      this.emit('fail', data);
-      return;
+    if(appState.slides.length) {
+      const slideStreams = await Promise.all(appState.slides.map(url => {
+        console.log('Loading slide ' + url);
+        return httpsGet(new URL(url), { ...headers, Referer: url });
+      }));
+      this.emit('slides', slideStreams, stackUrl);
+    } else {
+      const videoConfig = Object.values(appState.appConfig.ItemModule)[0].video;
+      const videoUrl = videoConfig.playAddr;
+      console.log('Loading video ' + videoUrl);
+      const videoStream = await httpsGet(new URL(videoUrl), { ...headers, Referer: videoUrl });
+      this.emit('video', videoStream, videoConfig, stackUrl);
     }
-
-    const videoConfig = Object.values(moduleConfig)[0]?.video;
-    if(!videoConfig) {
-      this.emit('fail', data);
-      return;
-    }
-
-    const videoUrl = videoConfig.playAddr;
-    if(!videoUrl) {
-      this.emit('fail', data);
-      return;
-    }
-
-    console.log('Loading video ' + videoUrl);
-    const videoStream = await httpsGet(new URL(videoUrl), { ...headers, Referer: videoUrl });
-    this.emit('success', videoStream, videoConfig, stackUrl);
   }
 };
 
-function parseAppConfig(html) {
-  var scriptContent = html.match(scriptTagRegex)?.[1];
-  if(!scriptContent) {
+function parseHtml(html) {
+  const dom = new JSDOM(html);
+  const doc = dom.window.document;
+
+  const appConfigScript = doc.querySelector('script[id="SIGI_STATE"]');
+  if(!appConfigScript) {
     console.error("Couldn't find app config");
     return;
   }
 
-  //var jsonSource = '{' + scriptContent.replace(/window\[['"](.*?)['"]\]\s*=/g, '"$1":').replace(/\};/g, '},') + '}';
-  var jsonSource = scriptContent;
-  try {
-    return JSON.parse(jsonSource);
-  } catch(error) {
-    console.error("Couldn't parse app config");
-    console.error(jsonSource);
+  const appConfig = JSON.parse(appConfigScript.innerHTML);
+  const slides = Array.from(doc.querySelectorAll('div.swiper-slide:not(.swiper-slide-duplicate) img')).map(img => img.src);
+
+  return {
+    appConfig,
+    slides
   }
 }
 

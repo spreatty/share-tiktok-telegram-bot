@@ -64,12 +64,12 @@ function deleteLinkRegistry(linkId) {
 }
 
 function getVideoByUrl(url) {
-  return pool.query('UPDATE videos SET used = used + 1, touched = CURRENT_TIMESTAMP WHERE file_id = (SELECT file_id FROM urls WHERE url = $1) RETURNING file_id, width, height', [url])
+  return pool.query('UPDATE videos SET used = used + 1, touched = CURRENT_TIMESTAMP WHERE file_id = (SELECT file_id FROM urls WHERE url = $1) RETURNING file_id, slides, width, height', [url])
       .then(result => result.rows);
 }
 
-function putVideo(fileId, width, height) {
-  return pool.query('INSERT INTO videos (file_id, width, height) VALUES ($1, $2, $3)', [fileId, width, height])
+function putVideo(fileId, slides, width, height) {
+  return pool.query('INSERT INTO videos (file_id, slides, width, height) VALUES ($1, $2, $3, $4)', [fileId, slides, width, height])
       .then(result => result.rows);
 }
 
@@ -101,8 +101,9 @@ function createSchema() {
     );
     CREATE TABLE IF NOT EXISTS videos (
       file_id VARCHAR(250) PRIMARY KEY,
-      width INTEGER NOT NULL,
-      height INTEGER NOT NULL,
+      slides TEXT,
+      width INTEGER,
+      height INTEGER,
       used INTEGER NOT NULL DEFAULT 1,
       created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       touched TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

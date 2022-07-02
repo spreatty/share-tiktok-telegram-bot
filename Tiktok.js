@@ -21,7 +21,7 @@ async function onTiktok({ update }) {
     return;
 
   const from = Util.getFullName(update.message.from);
-  const videoExtra = {
+  const extra = {
     caption: text.from + from,
     caption_entities: [{ type: 'bold', offset: text.from.length, length: from.length }]
   };
@@ -33,22 +33,28 @@ async function onTiktok({ update }) {
   console.log('Lookup URL: ' + tiktokLookupUrl);
   console.log('URL: ' + tiktokUrl);
 
-
   const cachedVideo = (await db.getVideoByUrl(tiktokLookupUrl.toString()))[0];
   if(cachedVideo) {
-    videoExtra.width = cachedVideo.width;
-    videoExtra.height = cachedVideo.height;
     const fileId = cachedVideo.file_id;
     console.log('Found in database. File id: ' + fileId);
-    targets.forEach(target => bot.telegram.sendVideo(target, fileId, videoExtra));
+    if(cachedVideo.slides) {
+      targets.forEach(target => bot.telegram.sendMediaGroup(target, cachedVideo.slides.map(slide => ({media: slide})), extra));
+    } else {
+      extra.width = cachedVideo.width;
+      extra.height = cachedVideo.height;
+      targets.forEach(target => bot.telegram.sendVideo(target, fileId, extra));
+    }
     return;
   }
 
   new TiktokFetcher(tiktokUrl)
-      .on('success', (videoStream, { width, height }, urls) => {
+      .on('video', (videoStream, { width, height }, urls) => {
         videoExtra.width = width;
         videoExtra.height = height;
-        sendAndSaveVideo(targets, { source: videoStream }, videoExtra, urls);
+        sendAndSaveVideo(targets, videoStream, extra, urls);
+      })
+      .on('slides', (slideStreams, urls) => {
+        sendAndSaveSlides(targets, slideStreams, extra, urls);
       })
       .on('fail', data => {
         console.log('Failed to retrieve the video. Forwarding original message and sending received html');
@@ -57,11 +63,19 @@ async function onTiktok({ update }) {
       .fetch();
 }
 
-async function sendAndSaveVideo([ first, ...rest ], videoData, videoExtra, urls) {
-  const response = await bot.telegram.sendVideo(first, videoData, videoExtra);
+async function sendAndSaveVideo([ first, ...rest ], videoStream, extra, urls) {
+  const response = await bot.telegram.sendVideo(first, {source: videoStream}, extra);
   const fileId = response.video.file_id;
-  db.putVideo(fileId, videoExtra.width, videoExtra.height);
-  rest.forEach(target => bot.telegram.sendVideo(target, fileId, videoExtra));
+  db.putVideo(fileId, null, extra.width, extra.height);
+  rest.forEach(target => bot.telegram.sendVideo(target, fileId, extra));
+  urls.forEach(url => db.putUrlRecord(url.toString(), fileId));
+}
+
+async function sendAndSaveSlides([ first, ...rest ], slideStreams, extra, urls) {
+  const response = await bot.telegram.sendMediaGroup(first, slideStreams.map(stream => ({media: {source: stream}})), extra);
+  const fileId = response.photo[0].file_id;
+  db.putVideo(fileId, response.photo.map(photo => photo.file_id).join('||'));
+  rest.forEach(target => bot.telegram.sendMediaGroup(target, response.photo, extra));
   urls.forEach(url => db.putUrlRecord(url.toString(), fileId));
 }
 
