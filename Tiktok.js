@@ -72,7 +72,7 @@ async function sendAndSaveVideo([ first, ...rest ], videoStream, extra, urls) {
 }
 
 async function sendAndSaveSlides([ first, ...rest ], slideStreams, extra, urls) {
-  const slidesData = slideStreams.map(streamToPhoto(extra));
+  const slidesData = slideStreams.map(streamToPhoto);
   Object.assign(slidesData[0], extra);
   const response = await bot.telegram.sendMediaGroup(first, slidesData);
   console.log(response[0].photo);
