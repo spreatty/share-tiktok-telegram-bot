@@ -74,8 +74,9 @@ async function sendAndSaveVideo([ first, ...rest ], videoStream, extra, urls) {
 async function sendAndSaveSlides([ first, ...rest ], slideStreams, extra, urls) {
   const response = await bot.telegram.sendMediaGroup(first, slideStreams.map(stream => ({media: {source: stream}})), extra);
   const fileId = response.photo[0].file_id;
-  db.putVideo(fileId, response.photo.map(photo => photo.file_id).join('||'));
-  rest.forEach(target => bot.telegram.sendMediaGroup(target, response.photo, extra));
+  const files = response.photo.map(photo => photo.file_id);
+  db.putVideo(fileId, files.join('||'));
+  rest.forEach(target => bot.telegram.sendMediaGroup(target, files.map(file => ({media: file})), extra));
   urls.forEach(url => db.putUrlRecord(url.toString(), fileId));
 }
 
