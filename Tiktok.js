@@ -72,8 +72,11 @@ async function sendAndSaveVideo([ first, ...rest ], videoStream, extra, urls) {
 }
 
 async function sendAndSaveSlides([ first, ...rest ], slideStreams, extra, urls) {
-  const response = await bot.telegram.sendMediaGroup(first, slideStreams.map(streamToPhoto(extra)));
-  console.log(response);
+  const slidesData = slideStreams.map(streamToPhoto(extra));
+  Object.assign(slidesData[0], extra);
+  const response = await bot.telegram.sendMediaGroup(first, slidesData);
+  console.log(response[0].photo);
+  return;
   const fileId = response.photo[0].file_id;
   const files = response.photo.map(photo => photo.file_id);
   db.putVideo(fileId, files.join('||'));
@@ -91,24 +94,13 @@ async function sendDocument([ first, ...rest ], originalText, docData) {
   });
 }
 
-function streamToPhoto(extra) {
-  return function(stream) {
-    return {
-      type: 'photo',
-      media: {
-        source: stream
-      },
-      ...extra
-    };
-  };
+function streamToPhoto(stream) {
+  return toPhoto({source: stream});
 }
 
-function toPhoto(extra) {
-  return function(media) {
-    return {
-      type: 'photo',
-      media,
-      ...extra
-    };
+function toPhoto(media) {
+  return {
+    type: 'photo',
+    media
   };
 }
