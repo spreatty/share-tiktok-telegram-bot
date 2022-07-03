@@ -48,9 +48,9 @@ async function onTiktok({ update }) {
   }
 
   new TiktokFetcher(tiktokUrl)
-      .on('video', (videoStream, urls) => {
-        //videoExtra.width = width;
-        //videoExtra.height = height;
+      .on('video', (videoStream, { width, height }, urls) => {
+        videoExtra.width = width;
+        videoExtra.height = height;
         sendAndSaveVideo(targets, videoStream, extra, urls);
       })
       .on('slides', (slideStreams, urls) => {
@@ -66,7 +66,7 @@ async function onTiktok({ update }) {
 async function sendAndSaveVideo([ first, ...rest ], videoStream, extra, urls) {
   const response = await bot.telegram.sendVideo(first, {source: videoStream}, extra);
   const fileId = response.video.file_id;
-  db.putVideo(fileId);//, null, extra.width, extra.height);
+  db.putVideo(fileId, null, extra.width, extra.height);
   rest.forEach(target => bot.telegram.sendVideo(target, fileId, extra));
   urls.forEach(url => db.putUrlRecord(url.toString(), fileId));
 }
