@@ -61,11 +61,11 @@ module.exports = class TiktokFetcher extends EventEmitter {
       }));
       this.emit('slides', slideStreams, stackUrl);
     } else {
-      const videoConfig = Object.values(appState.appConfig.ItemModule)[0].video;
-      const videoUrl = videoConfig.playAddr;
+      //const videoConfig = Object.values(appState.appConfig.ItemModule)[0].video;
+      const videoUrl = appState.video; //videoConfig.playAddr;
       console.log('Loading video ' + videoUrl);
       const videoStream = await httpsGet(new URL(videoUrl), { ...headers, Referer: videoUrl });
-      this.emit('video', videoStream, videoConfig, stackUrl);
+      this.emit('video', videoStream, stackUrl);
     }
   }
 };
@@ -74,19 +74,10 @@ function parseHtml(html) {
   const dom = new JSDOM(html);
   const doc = dom.window.document;
 
-  const appConfigScript = doc.querySelector('script[id="SIGI_STATE"]');
-  if(!appConfigScript) {
-    console.error("Couldn't find app config");
-    return;
-  }
-
-  const appConfig = JSON.parse(appConfigScript.innerHTML);
+  const video = doc.querySelector('video#sharing-main-video-el')?.src;
   const slides = Array.from(doc.querySelectorAll('div.swiper-slide:not(.swiper-slide-duplicate) img')).map(img => img.src);
 
-  return {
-    appConfig,
-    slides
-  }
+  return !video && !slides.length ? null : { video, slides };
 }
 
 async function httpGet(url, headers) {
