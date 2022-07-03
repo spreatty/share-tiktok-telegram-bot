@@ -71,6 +71,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
       this.emit('slides', slideStreams, stackUrl);
 
     } catch(e) {
+      console.error(e);
       this.emit('fail', data);
     }
   }
