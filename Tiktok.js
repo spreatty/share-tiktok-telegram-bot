@@ -49,8 +49,8 @@ async function onTiktok({ update }) {
 
   new TiktokFetcher(tiktokUrl)
       .on('video', (videoStream, { width, height }, urls) => {
-        videoExtra.width = width;
-        videoExtra.height = height;
+        extra.width = width;
+        extra.height = height;
         sendAndSaveVideo(targets, videoStream, extra, urls);
       })
       .on('slides', (slideStreams, urls) => {
