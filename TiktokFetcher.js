@@ -51,8 +51,8 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
     try {
 
-      if(appConfig.ItemModule) {
-        const videoConfig = Object.values(appConfig.ItemModule)[0].video;
+      const videoConfig = Object.values(appConfig.ItemModule || {})[0]?.video;
+      if(videoConfig) {
         const videoUrl = videoConfig.playAddr;
         console.log('Loading video ' + videoUrl);
         const videoStream = await httpsGet(new URL(videoUrl), { ...headers, Referer: videoUrl });
