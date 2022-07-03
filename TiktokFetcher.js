@@ -8,12 +8,13 @@ const http2Hosts = [
   'www.tiktok.com'
 ];
 const commonHeaders = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Safari/605.1.15',
   'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-gb',
   'Accept-Encoding': 'identity'
 };
-const scriptTagRegex = /<script\s+id\s*=\s*"SIGI_STATE"[^>]*>(.*?)<\/script>/i;
+const mobileUserAgent = 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36';
 const retriesCount = 3;
 
 module.exports = class TiktokFetcher extends EventEmitter {
@@ -27,14 +28,14 @@ module.exports = class TiktokFetcher extends EventEmitter {
   async fetch() {
     const stackUrl = new Set();
     const headers = { ...commonHeaders };
-    var data, appState;
+    var data, appConfig;
     var actualUrl = this.#url;
 
-    for(var i = 1; i <= retriesCount && !appState; ++i) {
+    for(var i = 1; i <= retriesCount && !appConfig; ++i) {
       if(i > 1)
         await new Promise(resolve => setTimeout(resolve, 100));
       console.log(`Attempt #${i} ${actualUrl}`);
-      const response = await httpGet(actualUrl, headers, true);
+      const response = await httpGet(actualUrl, headers);
       data = response.data;
       const newUrl = response.stackUrl[0].toString();
       if(actualUrl != newUrl) {
@@ -46,47 +47,54 @@ module.exports = class TiktokFetcher extends EventEmitter {
         urlNoSearch.search = '';
         stackUrl.add(urlNoSearch.toString());
       });
-      appState = parseHtml(data);
+      appConfig = parseAppConfig(data);
     }
 
-    if(!appState) {
-      this.emit('fail', data);
-      return;
-    }
+    try {
 
-    if(appState.slides.length) {
-      const slideStreams = await Promise.all(appState.slides.map(url => {
+      if(appConfig.ItemModule) {
+        const videoConfig = Object.values(appConfig.ItemModule)[0].video;
+        const videoUrl = videoConfig.playAddr;
+        console.log('Loading video ' + videoUrl);
+        const videoStream = await httpsGet(new URL(videoUrl), { ...headers, Referer: videoUrl });
+        this.emit('video', videoStream, videoConfig, stackUrl);
+        return;
+      }
+
+      headers['User-Agent'] = mobileUserAgent;
+      const response = await httpGet(actualUrl, headers);
+      data = response.data;
+      const slides = parseSlides(data);
+      const slideStreams = await Promise.all(slides.map(url => {
         console.log('Loading slide ' + url);
         return httpsGet(new URL(url), { ...headers, Referer: url });
       }));
       this.emit('slides', slideStreams, stackUrl);
-    } else {
-      const videoConfig = Object.values(appState.appConfig.ItemModule)[0].video;
-      const videoUrl = videoConfig.playAddr;
-      console.log('Loading video ' + videoUrl);
-      const videoStream = await httpsGet(new URL(videoUrl), { ...headers, Referer: videoUrl });
-      this.emit('video', videoStream, videoConfig, stackUrl);
+
+    } catch(e) {
+      this.emit('fail', data);
     }
   }
 };
 
-function parseHtml(html) {
+function parseAppConfig(html) {
   const dom = new JSDOM(html);
   const doc = dom.window.document;
 
-  const appConfigScript = doc.querySelector('script[id="SIGI_STATE"]');
+  const appConfigScript = doc.querySelector('script#SIGI_STATE');
   if(!appConfigScript) {
     console.error("Couldn't find app config");
     return;
   }
 
-  const appConfig = JSON.parse(appConfigScript.innerHTML);
-  const slides = Array.from(doc.querySelectorAll('div.swiper-slide:not(.swiper-slide-duplicate) img')).map(img => img.src);
+  return JSON.parse(appConfigScript.innerHTML);
+}
 
-  return {
-    appConfig,
-    slides
-  }
+function parseSlides(html) {
+  const dom = new JSDOM(html);
+  const doc = dom.window.document;
+
+  return Array.from(doc.querySelectorAll('div.swiper-slide:not(.swiper-slide-duplicate) img')).map(img => img.src);
 }
 
 async function httpGet(url, headers) {
