@@ -20,7 +20,7 @@ async function exec(ctx) {
   accessCheck(ctx);
 
   const code = ctx.update.message.text.slice('/exec '.length);
-  vm.runInNewContext(code, { bot, ctx, db, console });
+  vm.runInNewContext(code, { bot, ctx, db, console, m3u8stream });
 }
 
 async function sql(ctx) {
