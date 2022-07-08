@@ -135,8 +135,7 @@ function httpsGet(url, headers) {
           .on('response', function(res) {
             res.close = () => this.destroy();
             resolve(res);
-          })
-          .end());
+          }).end());
 }
 
 function http2Get(url, headers) {
@@ -151,17 +150,14 @@ function http2Get(url, headers) {
               ':authority': url.hostname,
               ':path': url.pathname + url.search,
               ...headers
-            })
-                .on('error', err => {
-                  reject(err);
-                  close();
-                })
-                .on('response', function(headers) {
-                  this.close = close;
-                  this.headers = headers;
-                  this.on('end', close);
-                  resolve(this);
-                })
-                .end();
+            }).on('error', err => {
+              reject(err);
+              close();
+            }).on('response', function(headers) {
+              this.close = close;
+              this.headers = headers;
+              this.on('end', close);
+              resolve(this);
+            }).end();
           }));
 }

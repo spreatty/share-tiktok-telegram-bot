@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "jsdom": "^20.0.0",
+    "m3u8stream": "^0.8.6",
     "pg": "^8.7.1",
     "telegraf": "^4.4.2"
   }

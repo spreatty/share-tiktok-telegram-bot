@@ -2,6 +2,7 @@ const vm = require('vm');
 const util = require('util');
 const db = require('./db');
 const Util = require('./Util');
+const m3u8stream = require('m3u8stream');
 
 module.exports = {
   addHandlers() {
