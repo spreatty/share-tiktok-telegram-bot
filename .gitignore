@@ -1,6 +1,11 @@
 *.http
 conn.js
 echo.js
+test.js
+.vscode
+*.zip
+
+.DS_Store
 
 # Logs
 logs

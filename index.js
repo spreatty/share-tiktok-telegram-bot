@@ -1,12 +1,9 @@
+const functions = require('@google-cloud/functions-framework');
 const { Telegraf } = require('telegraf');
 const { isTiktokUrl, onTiktok } = require('./Tiktok');
 const UserBot = require('./UserBot');
 const AdminBot = require('./AdminBot');
-const db = require('./db');
 const util = require('util');
-
-db.connect();
-db.createSchema();
 
 const bot = global.bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -15,23 +12,15 @@ bot.use((ctx, next) => {
   next();
 });
 
-process.once('SIGINT', () => {
-  bot.stop('SIGINT');
-  db.close();
-});
-process.once('SIGTERM', () => {
-  bot.stop('SIGTERM');
-  db.close();
-});
-
 UserBot.addHandlers();
 AdminBot.addHandlers();
 
 bot.url(isTiktokUrl, onTiktok);
 
-bot.launch({
-  webhook: {
-    domain: 'share-tiktok-telegram-bot.herokuapp.com',
-    port: process.env.PORT
-  }
-});
+const host = process.env.BOT_HOST;
+const path = `/telegraf/${bot.secretPathComponent()}`;
+
+console.log(`Setting webhook to https://${host}${path}`);
+bot.telegram.setWebhook(`https://${host}${path}`);
+
+functions.http('shareTikTokBot', bot.webhookCallback(path));

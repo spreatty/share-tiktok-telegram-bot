@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "local": "npx -dd --node-options=--inspect @google-cloud/functions-framework --target=shareTikTokBot",
+    "build": "zip zipfile * -x $(cat .gitignore)"
   },
   "repository": {
     "type": "git",
@@ -17,9 +18,12 @@
   },
   "homepage": "https://github.com/spreatty/share-tiktok-telegram-bot#readme",
   "engines": {
-    "node": "14.x"
+    "node": "v16.x"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^6.4.1",
+    "@google-cloud/functions-framework": "^3.1.2",
+    "express": "^4.18.2",
     "jsdom": "^20.0.0",
     "m3u8stream": "^0.8.6",
     "pg": "^8.7.1",
