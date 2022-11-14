@@ -3,7 +3,6 @@ const { isTiktokUrl, onTiktok } = require('./Tiktok');
 const UserBot = require('./UserBot');
 const AdminBot = require('./AdminBot');
 const db = require('./db');
-const util = require('util');
 
 db.connect();
 db.createSchema();
@@ -11,7 +10,7 @@ db.createSchema();
 const bot = global.bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.use((ctx, next) => {
-  console.log(util.inspect(ctx.update, false, 10));
+  console.log(JSON.stringify(ctx.update));
   next();
 });
 
