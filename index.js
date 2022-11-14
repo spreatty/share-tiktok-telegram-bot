@@ -30,7 +30,7 @@ bot.url(isTiktokUrl, onTiktok);
 
 bot.launch({
   webhook: {
-    domain: 'share-tiktok-telegram-bot.herokuapp.com',
+    domain: 'share-tiktok-bot.glitch.me',
     port: process.env.PORT
   }
 });

@@ -1,5 +1,5 @@
-const { Pool } = require('pg');
-var pool;
+const sqlite3 = require('sqlite3').verbose();
+var db;
 
 module.exports = {
   connect,
@@ -79,15 +79,11 @@ function putUrlRecord(url, fileId) {
 }
 
 function connect() {
-  return pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
+  return new Promise(resolve => db = new sqlite3.Database('./data.db', resolve));
 }
 
 function createSchema() {
   pool.query(`
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
     CREATE TABLE IF NOT EXISTS links (
       source VARCHAR(30) NOT NULL,
       target VARCHAR(30) NOT NULL,
