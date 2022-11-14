@@ -25,7 +25,6 @@ module.exports = class TiktokFetcher extends EventEmitter {
   }
 
   async fetch() {
-    const stackUrl = new Set();
     const headers = { ...commonHeaders };
     var data, appConfig;
     var actualUrl = this.#url;
@@ -41,22 +40,17 @@ module.exports = class TiktokFetcher extends EventEmitter {
         actualUrl = newUrl;
         i = 0;
       }
-      response.stackUrl.forEach(url => {
-        const urlNoSearch = new URL(url);
-        urlNoSearch.search = '';
-        stackUrl.add(urlNoSearch.toString());
-      });
+      
       appConfig = parseAppConfig(data);
     }
 
     try {
-
       const videoConfig = Object.values(appConfig.ItemModule || {})[0]?.video;
       if(videoConfig) {
         const videoUrl = videoConfig.playAddr;
         console.log('Loading video ' + videoUrl);
         const videoStream = await httpsGet(new URL(videoUrl), { ...headers, Referer: videoUrl });
-        this.emit('video', videoStream, videoConfig, stackUrl);
+        this.emit('video', videoStream, videoConfig);
         return;
       }
 
@@ -68,8 +62,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
         console.log('Loading slide ' + url);
         return httpsGet(new URL(url), { ...headers, Referer: url });
       }));
-      this.emit('slides', slideStreams, stackUrl);
-
+      this.emit('slides', slideStreams);
     } catch(e) {
       console.error(e);
       this.emit('fail', data);
