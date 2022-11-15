@@ -1,5 +1,5 @@
-const sqlite3 = require('sqlite3').verbose();
-var db;
+const { Pool } = require('pg');
+var pool;
 
 module.exports = {
   connect,
@@ -17,61 +17,73 @@ module.exports = {
 };
 
 function query(sql) {
-  return new Promise(resolve => db.all(sql, (err, rows) => resolve(rows)));
+  return pool.query(sql).then(result => result.rows);
 }
 
 function getTargets(source) {
-  return new Promise(resolve => db.all('SELECT target FROM links WHERE source = ?1', [source], (err, rows) => resolve(rows)));
+  return pool.query('SELECT target FROM links WHERE source = $1', [source])
+      .then(result => result.rows);
 }
 
 function getRelatedLinks(chatId) {
-  return new Promise(resolve => db.all('SELECT source, target FROM links WHERE source = ?1 OR target = ?1', [chatId], (err, rows) => resolve(rows)));
+  return pool.query('SELECT source, target FROM links WHERE source = $1 OR target = $1', [chatId])
+      .then(result => result.rows);
 }
 
 function countLinks(source, target) {
-  return new Promise(resolve => db.all('SELECT COUNT(*) AS count FROM links WHERE source = ?1 AND target = ?2', [source, target], (err, rows) => resolve(rows[0].count)));
+  return pool.query('SELECT COUNT(*) AS count FROM links WHERE source = $1 AND target = $2', [source, target])
+      .then(result => result.rows[0].count);
 }
 
 function putLink(source, target) {
-  return new Promise(resolve => db.run('INSERT INTO links VALUES (?1, ?2)', [source, target], function(){ resolve(this.changes); }));
+  return pool.query('INSERT INTO links VALUES ($1, $2)', [source, target])
+      .then(result => result.rows);
 }
 
 function deleteLink(source, target) {
-  return new Promise(resolve => db.run('DELETE FROM links WHERE source = ?1 AND target = ?2', [source, target], function(){ resolve(this.changes); }));
+  return pool.query('DELETE FROM links WHERE source = $1 AND target = $2 RETURNING *', [source, target])
+      .then(result => result.rows);
 }
 
 function getLinkRegistry(chatId, isFromSource) {
-  return new Promise(resolve => db.all('SELECT id FROM link_registry WHERE chat_id = ?1 AND from_source = ?2', [chatId, isFromSource], (err, rows) => resolve(rows)));
+  return pool.query('SELECT id FROM link_registry WHERE chat_id = $1 AND from_source = $2', [chatId, isFromSource])
+      .then(result => result.rows);
 }
 
-function putLinkRegistry(uuid, chatId, isFromSource) {
-  return new Promise(resolve => db.run('INSERT INTO link_registry VALUES (?1, ?2, ?3)', [uuid, chatId, isFromSource], function(){ resolve(this.changes); }));
+function putLinkRegistry(chatId, isFromSource) {
+  return pool.query('INSERT INTO link_registry (chat_id, from_source) VALUES ($1, $2) RETURNING id', [chatId, isFromSource])
+      .then(result => result.rows);
 }
 
 function deleteLinkRegistry(linkId) {
-  return new Promise(resolve => db.all('DELETE FROM link_registry WHERE id = ?1 RETURNING *', [linkId], (err, rows) => resolve(rows)));
+  return pool.query('DELETE FROM link_registry WHERE id = $1 RETURNING *', [linkId])
+      .then(result => result.rows);
 }
 
 function connect() {
-  return new Promise((resolve, reject) => db = new sqlite3.Database('./data.db', error => error ? reject(error) : resolve()));
+  return pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
 }
 
 function createSchema() {
-  return new Promise(resolve => db.exec(`
-      CREATE TABLE IF NOT EXISTS links (
-        source INT NOT NULL,
-        target INT NOT NULL,
-        PRIMARY KEY (source, target)
-      );
-      CREATE TABLE IF NOT EXISTS link_registry (
-        id CHAR(36) NOT NULL,
-        chat_id INT NOT NULL,
-        from_source BOOLEAN NOT NULL,
-        PRIMARY KEY (id)
-      );
-    `, resolve));
+  pool.query(`
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE TABLE IF NOT EXISTS links (
+      source VARCHAR(30) NOT NULL,
+      target VARCHAR(30) NOT NULL,
+      PRIMARY KEY (source, target)
+    );
+    CREATE TABLE IF NOT EXISTS link_registry (
+      id UUID DEFAULT uuid_generate_v4(),
+      chat_id VARCHAR(30) NOT NULL,
+      from_source BOOLEAN NOT NULL,
+      PRIMARY KEY (id)
+    );
+  `);
 }
 
 function close() {
-  return new Promise(resolve => db.close(resolve));
+  pool.end();
 }

@@ -1,4 +1,3 @@
-const uuid = require('uuid');
 const db = require('./db');
 const Util = require('./Util');
 
@@ -12,7 +11,7 @@ module.exports = {
 async function registerLink(chatId, isFromSource = false) {
   var rows = await db.getLinkRegistry(chatId, isFromSource);
   if(!rows.length)
-    rows = await db.putLinkRegistry(uuid.v4(), chatId, isFromSource);
+    rows = await db.putLinkRegistry(chatId, isFromSource);
   return rows[0].id;
 }
 
