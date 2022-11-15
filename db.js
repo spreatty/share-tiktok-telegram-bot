@@ -1,89 +1,25 @@
-const { Pool } = require('pg');
-var pool;
+const { MongoClient, ObjectId } = require('mongodb');
+var client;
 
 module.exports = {
-  connect,
-  createSchema,
-  close,
-  query,
-  getTargets,
-  getRelatedLinks,
-  countLinks,
-  putLink,
-  deleteLink,
-  getLinkRegistry,
-  putLinkRegistry,
-  deleteLinkRegistry
+  init: connStr => client = new MongoClient(connStr),
+  close: () => client.close(),
+  getTargets: async source => (await links().findOne({ _id: source }))?.targets,
+  findSources: async target => (await links().find({ targets: target }).toArray()).map(doc => doc._id),
+  addLink: async (source, target) => {
+    const res = await links().updateOne({ _id: source }, { $addToSet: { targets: target } }, { upsert: true });
+    return res.upsertedCount > 0 || res.modifiedCount > 0;
+  },
+  deleteLink: async (source, target) => {
+    const res = await links().updateOne({ _id: source }, { $pull: { targets: target } });
+    return res.modifiedCount > 0;
+  },
+  obtainRegistryId: async (chatId, isFromSource) => {
+    const res = await registry().findOneAndUpdate({ chatId, isFromSource }, { $setOnInsert: { chatId, isFromSource } }, { upsert: true });
+    return (res.lastErrorObject.upserted || res.value._id).toString();
+  },
+  pullRegistry: async regId => (await registry().findOneAndDelete({ _id: new ObjectId(regId) })).value
 };
 
-function query(sql) {
-  return pool.query(sql).then(result => result.rows);
-}
-
-function getTargets(source) {
-  return pool.query('SELECT target FROM links WHERE source = $1', [source])
-      .then(result => result.rows);
-}
-
-function getRelatedLinks(chatId) {
-  return pool.query('SELECT source, target FROM links WHERE source = $1 OR target = $1', [chatId])
-      .then(result => result.rows);
-}
-
-function countLinks(source, target) {
-  return pool.query('SELECT COUNT(*) AS count FROM links WHERE source = $1 AND target = $2', [source, target])
-      .then(result => result.rows[0].count);
-}
-
-function putLink(source, target) {
-  return pool.query('INSERT INTO links VALUES ($1, $2)', [source, target])
-      .then(result => result.rows);
-}
-
-function deleteLink(source, target) {
-  return pool.query('DELETE FROM links WHERE source = $1 AND target = $2 RETURNING *', [source, target])
-      .then(result => result.rows);
-}
-
-function getLinkRegistry(chatId, isFromSource) {
-  return pool.query('SELECT id FROM link_registry WHERE chat_id = $1 AND from_source = $2', [chatId, isFromSource])
-      .then(result => result.rows);
-}
-
-function putLinkRegistry(chatId, isFromSource) {
-  return pool.query('INSERT INTO link_registry (chat_id, from_source) VALUES ($1, $2) RETURNING id', [chatId, isFromSource])
-      .then(result => result.rows);
-}
-
-function deleteLinkRegistry(linkId) {
-  return pool.query('DELETE FROM link_registry WHERE id = $1 RETURNING *', [linkId])
-      .then(result => result.rows);
-}
-
-function connect() {
-  return pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
-}
-
-function createSchema() {
-  pool.query(`
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    CREATE TABLE IF NOT EXISTS links (
-      source VARCHAR(30) NOT NULL,
-      target VARCHAR(30) NOT NULL,
-      PRIMARY KEY (source, target)
-    );
-    CREATE TABLE IF NOT EXISTS link_registry (
-      id UUID DEFAULT uuid_generate_v4(),
-      chat_id VARCHAR(30) NOT NULL,
-      from_source BOOLEAN NOT NULL,
-      PRIMARY KEY (id)
-    );
-  `);
-}
-
-function close() {
-  pool.end();
-}
+const links = () => client.db('shareTikTokBot').collection('links');
+const registry = () => client.db('shareTikTokBot').collection('registry');

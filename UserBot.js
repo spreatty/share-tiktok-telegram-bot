@@ -1,4 +1,4 @@
-const { registerLink, takeLinkRegistry, link, list } = require('./LinkUtil');
+const { list } = require('./LinkUtil');
 const db = require('./db');
 const text = require('./text');
 const props = require('./props');
@@ -19,8 +19,6 @@ function start(ctx) {
 }
 
 function callbackQuery(ctx) {
-  ctx.answerCbQuery();
-  
   const chatId = ctx.update.callback_query.message.chat.id.toString();
   const [ command, ...params ] = ctx.callbackQuery.data.split(' ');
   switch(command) {
@@ -33,16 +31,16 @@ function callbackQuery(ctx) {
   }
 }
 
-function cbLink(_, chatId, [ action ]) {
+function cbLink(ctx, chatId, [ action ]) {
   switch(action) {
     case 'source':
-      setupLink(chatId, true);
+      setupLink(ctx, chatId, true);
       break;
     case 'target':
-      setupLink(chatId, false);
+      setupLink(ctx, chatId, false);
       break;
     case 'both':
-      setupForBoth(chatId);
+      setupForBoth(ctx, chatId);
   }
 }
 
@@ -53,40 +51,44 @@ async function cbUnlink(ctx, chatId, [ dir, linkedChatId, ...name ]) {
   switch(dir) {
     case 'loop':
       didDelete = (await db.deleteLink(chatId, chatId)).length;
+      ctx.answerCbQuery();
       ctx.reply(didDelete ? text.unlinked.loop : text.notLinkedLoop);
       break;
     case 'from':
       didDelete = (await db.deleteLink(chatId, linkedChatId)).length;
+      ctx.answerCbQuery();
       ctx.reply(text.get(didDelete ? text.unlinked.from : text.notLinked, name));
       break;
     case 'to':
       didDelete = (await db.deleteLink(linkedChatId, chatId)).length;
+      ctx.answerCbQuery();
       ctx.reply(text.get(didDelete ? text.unlinked.to : text.notLinked, name));
   }
 }
 
-async function setupLink(chatId, isFromSource) {
-  const linkId = await registerLink(chatId, isFromSource);
-  
-  bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source'], props.selectChat(linkId));
+async function setupLink(ctx, chatId, isFromSource) {
+  const regId = await db.obtainRegistryId(chatId, isFromSource);
+  ctx.answerCbQuery();
+  bot.telegram.sendMessage(chatId, text.selectChat[isFromSource ? 'target' : 'source'], props.selectChat(regId));
 }
 
-async function setupForBoth(chatId) {
+async function setupForBoth(ctx, chatId) {
   const ok = await link(chatId, chatId);
+  ctx.answerCbQuery();
   bot.telegram.sendMessage(chatId, ok ? text.linked.self : text.alreadyLinkedSelf);
 }
 
 async function onLink(ctx) {
-  const linkId = ctx.update.message.text.split(' ')[2];
+  const regId = ctx.update.message.text.split(' ')[2];
   
-  const linkRegistry = await takeLinkRegistry(linkId);
-  if(!linkRegistry) {
+  const registry = await db.pullRegistry(regId);
+  if(!registry) {
     ctx.reply(text.error.link.badRegistry);
     return;
   }
   
   const chatId = ctx.update.message.chat.id.toString();
-  var source = linkRegistry.chatId,
+  var source = registry.chatId,
       target = chatId;
   
   if(source == target) {
@@ -94,9 +96,9 @@ async function onLink(ctx) {
     return;
   }
   
-  if(!linkRegistry.isFromSource) {
+  if(!registry.isFromSource) {
     source = chatId;
-    target = linkRegistry.chatId;
+    target = registry.chatId;
   }
   
   const ok = await link(source, target);

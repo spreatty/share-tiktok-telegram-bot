@@ -1,5 +1,4 @@
 const vm = require('vm');
-const util = require('util');
 const db = require('./db');
 const Util = require('./Util');
 const m3u8stream = require('m3u8stream');
@@ -7,7 +6,6 @@ const m3u8stream = require('m3u8stream');
 module.exports = {
   addHandlers() {
     bot.command('exec', exec);
-    bot.command('sql', sql);
   }
 };
 
@@ -23,7 +21,7 @@ async function exec(ctx) {
   vm.runInNewContext(code, { bot, ctx, db, console, m3u8stream });
 }
 
-async function sql(ctx) {
+/*async function sql(ctx) {
   accessCheck(ctx);
 
   const sql = ctx.update.message.text.slice('/sql '.length);
@@ -66,4 +64,4 @@ async function sql(ctx) {
 
 function pad(txt, len) {
   return txt + Array(len - txt.length).fill(' ').join('');
-}
+}*/
