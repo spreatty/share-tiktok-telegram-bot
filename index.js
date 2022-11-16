@@ -32,7 +32,7 @@ app.post(path, (req, res) => {
   webhookCallback(req, res);
 });
 
-const server = app.listen(process.env.PORT, () => {
+const server = app.listen(process.env.PORT || 8080, () => {
   console.log(`Ready. Share TikTok Bot serves at ${webhookUrl}`);
   bot.telegram.setWebhook(webhookUrl).then(() => console.log('Webhook set'), () => console.log('Failed setting webhook'));
 });
