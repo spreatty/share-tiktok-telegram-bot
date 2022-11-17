@@ -8,7 +8,7 @@ module.exports = (req, res) => {
             query: req.query,
             body: req.body
         });
-    } else {
+    } else if(req.url == '/api/telegraf/' + process.env.SHARE_TIKTOK_BOT_TOKEN) {
         webhookCallback(req,res);
     }
 };
