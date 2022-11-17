@@ -5,7 +5,7 @@ const AdminBot = require('./AdminBot');
 const db = require('./db');
 
 const bot = global.bot = new Telegraf(process.env.SHARE_TIKTOK_BOT_TOKEN);
-const path = '/api/telegraf/' + process.env.SHARE_TIKTOK_BOT_TOKEN;
+const path = '/api/telegraf?token=' + process.env.SHARE_TIKTOK_BOT_TOKEN;
 const webhookUrl = 'https://' + process.env.SHARE_TIKTOK_BOT_DOMAIN + path;
 
 bot.use((ctx, next) => {
