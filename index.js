@@ -5,7 +5,7 @@ const AdminBot = require('./AdminBot');
 const db = require('./db');
 
 const bot = global.bot = new Telegraf(process.env.SHARE_TIKTOK_BOT_TOKEN);
-const path = '/telegraf/' + bot.secretPathComponent();
+const path = '/api/telegraf/' + bot.secretPathComponent();
 const webhookUrl = 'https://' + process.env.SHARE_TIKTOK_BOT_DOMAIN + path;
 
 bot.use((ctx, next) => {
@@ -19,15 +19,7 @@ bot.url(isTiktokUrl, onTiktok);
 
 db.init(process.env.SHARE_TIKTOK_BOT_DB_CONN);
 
-const webhookCallback = bot.webhookCallback(path);
-
-module.exports = function(req, res) {
-  if(req.url == '/') {
-    res.json({ status: 'ok' });
-  } else {
-    webhookCallback(req, res);
-  }
-};
+module.exports = bot.webhookCallback(path);
 
 console.log(`Share TikTok Bot serves at ${webhookUrl}`);
 bot.telegram.setWebhook(webhookUrl)
