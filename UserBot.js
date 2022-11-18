@@ -121,7 +121,7 @@ async function onList(ctx) {
   const loopMsg = hasLoop && text.list.loop;
   const msg = [loopMsg, toMsg, fromMsg].filter(str => str).join('\n\n');
 
-  ctx.reply(msg);
+  ctx.reply(msg || text.list.nothing);
 }
 
 async function unlink(ctx) {
