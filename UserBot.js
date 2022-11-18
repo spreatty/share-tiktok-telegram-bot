@@ -19,7 +19,7 @@ function start(ctx) {
 }
 
 function callbackQuery(ctx) {
-  const chatId = ctx.update.callback_query.message.chat.id.toString();
+  const chatId = ctx.update.callback_query.message.chat.id;
   const [ command, ...params ] = ctx.callbackQuery.data.split(' ');
   switch(command) {
     case 'link':
@@ -87,7 +87,7 @@ async function onLink(ctx) {
     return;
   }
   
-  const chatId = ctx.update.message.chat.id.toString();
+  const chatId = ctx.update.message.chat.id;
   var source = registry.chatId,
       target = chatId;
   
@@ -113,7 +113,7 @@ async function onLink(ctx) {
 }
 
 async function onList(ctx) {
-  const chatId = ctx.update.message.chat.id.toString();
+  const chatId = ctx.update.message.chat.id;
   const { from, to, hasLoop } = await list(chatId);
 
   const fromMsg = from.length && text.list.from + '\n' + from.map(link => link.name).join('\n');
@@ -125,7 +125,7 @@ async function onList(ctx) {
 }
 
 async function unlink(ctx) {
-  const chatId = ctx.update.message.chat.id.toString();
+  const chatId = ctx.update.message.chat.id;
   const { from, to, hasLoop } = await list(chatId);
 
   if(hasLoop)
