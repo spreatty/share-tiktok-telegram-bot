@@ -50,17 +50,17 @@ async function cbUnlink(ctx, chatId, [ dir, linkedChatId, ...name ]) {
 
   switch(dir) {
     case 'loop':
-      didDelete = (await db.deleteLink(chatId, chatId)).length;
+      didDelete = await db.deleteLink(chatId, chatId);
       ctx.answerCbQuery();
       ctx.reply(didDelete ? text.unlinked.loop : text.notLinkedLoop);
       break;
     case 'from':
-      didDelete = (await db.deleteLink(chatId, linkedChatId)).length;
+      didDelete = await db.deleteLink(chatId, linkedChatId);
       ctx.answerCbQuery();
       ctx.reply(text.get(didDelete ? text.unlinked.from : text.notLinked, name));
       break;
     case 'to':
-      didDelete = (await db.deleteLink(linkedChatId, chatId)).length;
+      didDelete = await db.deleteLink(linkedChatId, chatId);
       ctx.answerCbQuery();
       ctx.reply(text.get(didDelete ? text.unlinked.to : text.notLinked, name));
   }
