@@ -26,7 +26,7 @@ async function broadcast(ctx) {
   accessCheck(ctx);
 
   const msg = ctx.update.message.text.slice('/broadcast '.length);
-  const chatIds = (await db.allLinks()).flatMap(({ _id, targets }) => [ _id, ...targets ]);
+  const chatIds = new Set((await db.allLinks()).flatMap(({ _id, targets }) => [ _id, ...targets ]));
   chatIds.forEach(chatId => bot.telegram.sendMessage(chatId, msg));
 }
 
