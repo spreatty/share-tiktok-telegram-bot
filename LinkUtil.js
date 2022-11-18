@@ -23,5 +23,5 @@ function completeChatsInfo(chats, mainChatId) {
   return chats.filter(item => item != mainChatId)
     .map(chatId => bot.telegram.getChat(chatId)
       .then(Util.getChatTitle)
-      .then(name => { name, chatId }));
+      .then(name => ({ name, chatId })));
 }
