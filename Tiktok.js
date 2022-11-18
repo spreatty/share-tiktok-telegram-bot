@@ -16,7 +16,7 @@ function isTiktokUrl(url) {
 
 async function onTiktok({ update }) {
   const source = update.message.chat.id.toString();
-  const targets = (await db.getTargets(source)).map(row => row.target);
+  const targets = await db.getTargets(source);
   if(!targets.length)
     return;
 

@@ -4,7 +4,7 @@ var client;
 module.exports = {
   init: connStr => client = new MongoClient(connStr),
   close: () => client.close(),
-  getTargets: async source => (await links().findOne({ _id: source }))?.targets,
+  getTargets: async source => (await links().findOne({ _id: source }))?.targets || [],
   findSources: async target => (await links().find({ targets: target }).toArray()).map(doc => doc._id),
   addLink: async (source, target) => {
     const res = await links().updateOne({ _id: source }, { $addToSet: { targets: target } }, { upsert: true });

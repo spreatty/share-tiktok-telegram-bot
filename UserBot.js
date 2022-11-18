@@ -73,7 +73,7 @@ async function setupLink(ctx, chatId, isFromSource) {
 }
 
 async function setupForBoth(ctx, chatId) {
-  const ok = await link(chatId, chatId);
+  const ok = await db.addLink(chatId, chatId);
   ctx.answerCbQuery();
   bot.telegram.sendMessage(chatId, ok ? text.linked.self : text.alreadyLinkedSelf);
 }
@@ -101,7 +101,7 @@ async function onLink(ctx) {
     target = registry.chatId;
   }
   
-  const ok = await link(source, target);
+  const ok = await db.addLink(source, target);
   if(!ok) {
     await ctx.reply(text.alreadyLinked);
   } else {
@@ -114,11 +114,11 @@ async function onLink(ctx) {
 
 async function onList(ctx) {
   const chatId = ctx.update.message.chat.id.toString();
-  const { from, to, loop } = await list(chatId);
+  const { from, to, hasLoop } = await list(chatId);
 
   const fromMsg = from.length && text.list.from + '\n' + from.map(link => link.name).join('\n');
   const toMsg = to.length && text.list.to + '\n' + to.map(link => link.name).join('\n');
-  const loopMsg = loop && text.list.loop;
+  const loopMsg = hasLoop && text.list.loop;
   const msg = [loopMsg, toMsg, fromMsg].filter(str => str).join('\n\n');
 
   ctx.reply(msg);
@@ -126,9 +126,9 @@ async function onList(ctx) {
 
 async function unlink(ctx) {
   const chatId = ctx.update.message.chat.id.toString();
-  const { from, to, loop } = await list(chatId);
+  const { from, to, hasLoop } = await list(chatId);
 
-  if(loop)
+  if(hasLoop)
     await ctx.reply(text.unlink.loop, props.unlinkLoop);
 
   if(from.length)
