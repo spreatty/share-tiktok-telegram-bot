@@ -6,6 +6,7 @@ const m3u8stream = require('m3u8stream');
 module.exports = {
   addHandlers() {
     bot.command('exec', exec);
+    bot.command('broadcast', broadcast);
   }
 };
 
@@ -14,11 +15,19 @@ function accessCheck(ctx) {
     throw new Error('Admin access denied for ' + (ctx.update.message.chat.username || Util.getChatTitle(ctx.update.message.chat)));
 }
 
-async function exec(ctx) {
+function exec(ctx) {
   accessCheck(ctx);
 
   const code = ctx.update.message.text.slice('/exec '.length);
   vm.runInNewContext(code, { bot, ctx, db, console, m3u8stream });
+}
+
+async function broadcast(ctx) {
+  accessCheck(ctx);
+
+  const msg = ctx.update.message.text.slice('/broadcast '.length);
+  const chatIds = (await db.allLinks()).flatMap(({ _id, targets }) => [ _id, ...targets ]);
+  chatIds.forEach(chatId => bot.telegram.sendMessage(chatId, msg));
 }
 
 /*async function sql(ctx) {
