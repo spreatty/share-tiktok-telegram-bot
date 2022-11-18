@@ -4,6 +4,7 @@ var client;
 module.exports = {
   init: connStr => client = new MongoClient(connStr),
   close: () => client.close(),
+  allLinks: () => links().find().toArray(),
   getTargets: async source => (await links().findOne({ _id: source }))?.targets || [],
   findSources: async target => (await links().find({ targets: target }).toArray()).map(doc => doc._id),
   addLink: async (source, target) => {
