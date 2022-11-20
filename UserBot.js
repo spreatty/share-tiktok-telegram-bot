@@ -1,4 +1,5 @@
 const { list } = require('./LinkUtil');
+const Util = require('./Util');
 const db = require('./db');
 const text = require('./text');
 const props = require('./props');
@@ -10,6 +11,7 @@ module.exports = {
     bot.hears(/^@ShareTikTokBot link [\w-]+$/, onLink);
     bot.command('list', onList);
     bot.command('unlink', unlink);
+    bot.command('feedback', feedback);
   }
 };
 
@@ -151,3 +153,10 @@ async function unlink(ctx) {
       }
     });
 }
+
+function feedback(ctx) {
+  const msg = ctx.update.message.text.slice('/feedback '.length);
+  const from = ctx.update.message.chat.username || Util.getChatTitle(ctx.update.message.chat);
+  const fromId = ctx.update.message.chat.id;
+  bot.telegram.sendMessage(process.env.BOT_OWNER, `${from}\n${fromId}\n${msg}`);
+};

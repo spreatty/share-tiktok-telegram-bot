@@ -6,6 +6,7 @@ const m3u8stream = require('m3u8stream');
 module.exports = {
   addHandlers() {
     bot.command('exec', exec);
+    bot.command('self', self);
     bot.command('broadcast', broadcast);
   }
 };
@@ -20,6 +21,13 @@ function exec(ctx) {
 
   const code = ctx.update.message.text.slice('/exec '.length);
   vm.runInNewContext(code, { bot, ctx, db, console, m3u8stream });
+}
+
+async function self(ctx) {
+  accessCheck(ctx);
+
+  const msg = ctx.update.message.text.slice('/self '.length);
+  bot.telegram.sendMessage(process.env.BOT_OWNER, msg);
 }
 
 async function broadcast(ctx) {
