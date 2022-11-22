@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/spreatty/share-tiktok-telegram-bot#readme",
   "engines": {
-    "node": "v16.x"
+    "node": "v18.x"
   },
   "dependencies": {
     "express": "^4.18.2",

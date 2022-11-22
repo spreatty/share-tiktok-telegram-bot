@@ -1,8 +1,8 @@
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient, ObjectId, ServerApiVersion } = require('mongodb');
 var client;
 
 module.exports = {
-  init: connStr => client = new MongoClient(connStr),
+  init: connStr => client = new MongoClient(connStr, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 }),
   close: () => client.close(),
   allLinks: () => links().find().toArray(),
   getTargets: async source => (await links().findOne({ _id: source }))?.targets || [],
