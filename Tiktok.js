@@ -43,6 +43,12 @@ async function onTiktok({ update }) {
         console.log('Failed to retrieve the video. Forwarding original message and sending received html');
         sendDocument(targets, update.message.text, { source: Buffer.from(data), filename: 'tiktok.html' });
       })
+      .on('blocked', () => {
+        bot.telegram.sendMessage(source, text.blocked);
+      })
+      .on('invalid', () => {
+        bot.telegram.sendMessage(source, text.invalid);
+      })
       .fetch();
 }
 

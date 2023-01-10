@@ -35,9 +35,15 @@ module.exports = class TiktokFetcher extends EventEmitter {
       console.log(`Attempt #${i} ${actualUrl}`);
       const response = await httpGet(actualUrl, headers);
       data = response.data;
-      const newUrl = response.stackUrl[0].toString();
-      if(actualUrl != newUrl) {
-        actualUrl = newUrl;
+      const newUrl = response.stackUrl[0];
+
+      if(newUrl.host == 'www.tiktok.com' && newUrl.pathname == '/') {
+        this.emit(newUrl.searchParams.has('_t') && newUrl.searchParams.has('_r') ? 'blocked' : 'invalid');
+        return;
+      }
+
+      if(actualUrl != newUrl.toString()) {
+        actualUrl = newUrl.toString();
         i = 0;
       }
       
