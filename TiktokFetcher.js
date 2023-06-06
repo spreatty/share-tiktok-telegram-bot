@@ -44,14 +44,20 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
       if(actualUrl != newUrl.toString()) {
         actualUrl = newUrl.toString();
-        i = 0;
+        i = 1;
       }
       
       appConfig = parseAppConfig(data);
     }
 
     try {
-      const videoConfig = Object.values(appConfig.ItemModule || {})[0]?.video;
+      const displayItem = Object.values(appConfig.ItemModule || {})[0];
+      if(!displayItem) {
+        console.log('No ItemModule');
+        this.emit('fail');
+      }
+
+      const videoConfig = displayItem.video;
       const videoUrl = videoConfig?.playAddr;
       if(videoUrl) {
         console.log('Loading video ' + videoUrl);
@@ -60,10 +66,8 @@ module.exports = class TiktokFetcher extends EventEmitter {
         return;
       }
 
-      //headers['User-Agent'] = mobileUserAgent;
-      //const response = await httpGet(actualUrl, headers);
-      //data = response.data;
-      const slides = parseSlides(data);
+      const slides = displayItem.imagePost.images.flatMap(img => img.imageURL.urlList);
+      console.log('Slides:\n  ' + slides.join('\n  '));
       const slideStreams = await Promise.all(slides.map(url => {
         console.log('Loading slide ' + url);
         return httpsGet(new URL(url), { ...headers, Referer: url });
@@ -71,7 +75,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
       this.emit('slides', slideStreams);
     } catch(e) {
       console.error(e);
-      this.emit('fail', data);
+      this.emit('fail');
     }
   }
 };

@@ -37,7 +37,7 @@ async function onTiktok({ update }) {
         try {
           await sendVideo(targets, videoStream, extra);
         } catch(error) {
-          sendMessage(targets, (error.code() == 413 ? text.error.tooLarge : text.error.unknown) + '\n\n' + update.message.text);
+          sendMessage(targets, (error.code == 413 ? text.error.tooLarge : text.error.unknown) + '\n\n' + update.message.text);
         }
       })
       .on('slides', slideStreams => {
