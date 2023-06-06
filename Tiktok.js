@@ -31,17 +31,21 @@ async function onTiktok({ update }) {
   console.log('URL: ' + tiktokUrl);
 
   new TiktokFetcher(tiktokUrl)
-      .on('video', (videoStream, { width, height }) => {
+      .on('video', async (videoStream, { width, height }) => {
         extra.width = width;
         extra.height = height;
-        sendVideo(targets, videoStream, extra);
+        try {
+          await sendVideo(targets, videoStream, extra);
+        } catch(error) {
+          sendMessage(targets, (error.code() == 413 ? text.error.tooLarge : text.error.unknown) + '\n\n' + update.message.text);
+        }
       })
-      .on('slides', (slideStreams) => {
+      .on('slides', slideStreams => {
         sendSlides(targets, slideStreams, extra);
       })
       .on('fail', data => {
-        console.log('Failed to retrieve the video. Forwarding original message and sending received html');
-        sendDocument(targets, update.message.text, { source: Buffer.from(data), filename: 'tiktok.html' });
+        console.log('Failed to retrieve the video. Forwarding original message.');
+        sendMessage(targets, text.error.unknown + '\n\n' + update.message.text);
       })
       .on('blocked', () => {
         bot.telegram.sendMessage(source, text.blocked);
@@ -64,13 +68,9 @@ async function sendSlides([ first, ...rest ], slideStreams, extra) {
   rest.forEach(target => bot.telegram.sendMediaGroup(target, prepareSlides(files, extra)));
 }
 
-async function sendDocument([ first, ...rest ], originalText, docData) {
-  await bot.telegram.sendMessage(first, originalText, props.noPreview);
-  const response = await bot.telegram.sendDocument(first, docData);
-  const fileId = response.document.file_id;
-  rest.forEach(async target => {
-    await bot.telegram.sendMessage(target, originalText, props.noPreview);
-    bot.telegram.sendDocument(target, fileId);
+async function sendMessage(targets, message) {
+  targets.forEach(target => {
+    bot.telegram.sendMessage(target, message, props.noPreview);
   });
 }
 
