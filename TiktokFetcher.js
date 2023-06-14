@@ -66,7 +66,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
         return;
       }
 
-      const slides = displayItem.imagePost.images.flatMap(img => img.imageURL.urlList);
+      const slides = displayItem.imagePost.images.map(img => img.imageURL.urlList[0]);
       console.log('Slides:\n  ' + slides.join('\n  '));
       const slideStreams = await Promise.all(slides.map(url => {
         console.log('Loading slide ' + url);
