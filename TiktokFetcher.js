@@ -26,15 +26,15 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
   async fetch() {
     const headers = { ...commonHeaders };
-    var data, appConfig;
+    var displayItem;
     var actualUrl = this.#url;
 
-    for(var i = 1; i <= retriesCount && !appConfig; ++i) {
+    for(var i = 1; i <= retriesCount; ++i) {
       if(i > 1)
         await new Promise(resolve => setTimeout(resolve, 100));
       console.log(`Attempt #${i} ${actualUrl}`);
       const response = await httpGet(actualUrl, headers);
-      data = response.data;
+      const data = response.data;
       const newUrl = response.stackUrl[0];
 
       if(newUrl.host == 'www.tiktok.com' && newUrl.pathname == '/') {
@@ -47,14 +47,17 @@ module.exports = class TiktokFetcher extends EventEmitter {
         i = 1;
       }
       
-      appConfig = parseAppConfig(data);
+      const appConfig = parseAppConfig(data);
+      displayItem = getDisplayItem(appConfig);
+      if(displayItem)
+        break;
     }
 
     try {
-      const displayItem = Object.values(appConfig.ItemModule || {})[0];
       if(!displayItem) {
-        console.log('No ItemModule');
+        console.warn('Could not get video data');
         this.emit('fail');
+        return;
       }
 
       const videoConfig = displayItem.video;
@@ -80,13 +83,20 @@ module.exports = class TiktokFetcher extends EventEmitter {
   }
 };
 
+function getDisplayItem(appConfig) {
+  const itemConfig = Object.values(appConfig.ItemModule || {})[0];
+  if(!itemConfig)
+    console.warn('No item config');
+  return itemConfig;
+}
+
 function parseAppConfig(html) {
   const dom = new JSDOM(html);
   const doc = dom.window.document;
 
   const appConfigScript = doc.querySelector('script#SIGI_STATE');
   if(!appConfigScript) {
-    console.error("Couldn't find app config");
+    console.warn("Couldn't find app config");
     return;
   }
 
