@@ -118,8 +118,9 @@ async function httpGet(url, headers) {
     headers.cookie = response.headers['set-cookie'].map(cookie => cookie.split(';')[0]).join('; ');
     console.log('Set cookie: ' + headers.cookie);
   }
-  const redirect = response.headers.location;
+  var redirect = response.headers.location;
   if(redirect) {
+    redirect = new URL(redirect, url);
     console.log('Redirect to ' + redirect);
     response.close();
     const result = await httpGet(redirect, headers);
