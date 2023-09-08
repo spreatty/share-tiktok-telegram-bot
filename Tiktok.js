@@ -44,8 +44,8 @@ async function onTiktok({ update }) {
         sendSlides(targets, slideStreams, extra);
       })
       .on('fail', data => {
-        console.log('Failed to retrieve the video. Forwarding original message.');
-        sendMessage(targets, text.error.unknown + '\n\n' + update.message.text);
+        console.log('Failed to retrieve the video. Forwarding original message and sending received html');
+        sendDocument(targets, text.error.unknown + '\n\n' + update.message.text, { source: Buffer.from(data), filename: 'debug.html' });
       })
       .on('blocked', () => {
         bot.telegram.sendMessage(source, text.blocked);
@@ -71,6 +71,16 @@ async function sendSlides([ first, ...rest ], slideStreams, extra) {
 async function sendMessage(targets, message) {
   targets.forEach(target => {
     bot.telegram.sendMessage(target, message, props.noPreview);
+  });
+}
+
+async function sendDocument([ first, ...rest ], originalText, docData) {
+  await bot.telegram.sendMessage(first, originalText, props.noPreview);
+  const response = await bot.telegram.sendDocument(first, docData);
+  const fileId = response.document.file_id;
+  rest.forEach(async target => {
+    await bot.telegram.sendMessage(target, originalText, props.noPreview);
+    bot.telegram.sendDocument(target, fileId);
   });
 }
 

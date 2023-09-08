@@ -84,7 +84,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
 };
 
 function getDisplayItem(appConfig) {
-  const itemConfig = Object.values(appConfig.ItemModule || {})[0];
+  const itemConfig = Object.values(appConfig?.ItemModule || {})[0];
   if(!itemConfig)
     console.warn('No item config');
   return itemConfig;
