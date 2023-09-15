@@ -26,7 +26,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
 
   async fetch() {
     const headers = { ...commonHeaders };
-    var displayItem;
+    var data, displayItem;
     var actualUrl = this.#url;
 
     for(var i = 1; i <= retriesCount; ++i) {
@@ -34,7 +34,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
         await new Promise(resolve => setTimeout(resolve, 100));
       console.log(`Attempt #${i} ${actualUrl}`);
       const response = await httpGet(actualUrl, headers);
-      const data = response.data;
+      data = response.data;
       const newUrl = response.stackUrl[0];
 
       if(newUrl.host == 'www.tiktok.com' && newUrl.pathname == '/') {
@@ -56,7 +56,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
     try {
       if(!displayItem) {
         console.warn('Could not get video data');
-        this.emit('fail');
+        this.emit('fail', data);
         return;
       }
 
@@ -78,7 +78,7 @@ module.exports = class TiktokFetcher extends EventEmitter {
       this.emit('slides', slideStreams);
     } catch(e) {
       console.error(e);
-      this.emit('fail');
+      this.emit('fail', data);
     }
   }
 };
