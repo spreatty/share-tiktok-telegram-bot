@@ -2,6 +2,7 @@ const https = require('https');
 const http2 = require('http2');
 const EventEmitter = require('events');
 const { JSDOM } = require('jsdom');
+const Util = require('./Util');
 
 const http2Hosts = [
   'm.tiktok.com',
@@ -84,17 +85,21 @@ module.exports = class TiktokFetcher extends EventEmitter {
 };
 
 function getDisplayItem(appConfig) {
-  const itemConfig = Object.values(appConfig?.ItemModule || {})[0];
-  if(!itemConfig)
+  const path = Util.searchJSONTree(appConfig, 'playAddr')[0];
+  if(!path) {
     console.warn('No item config');
-  return itemConfig;
+    return null;
+  }
+  const videoParent = path[path.length - 3][1];
+  return videoParent;
 }
 
 function parseAppConfig(html) {
   const dom = new JSDOM(html);
   const doc = dom.window.document;
 
-  const appConfigScript = doc.querySelector('script#SIGI_STATE');
+  const appConfigScript = Array.from(doc.querySelectorAll('script[type="application/json"]'))
+    .filter(s => s.innerHTML.includes('playAddr'))[0];
   if(!appConfigScript) {
     console.warn("Couldn't find app config");
     return;
